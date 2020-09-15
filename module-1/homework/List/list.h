@@ -7,6 +7,7 @@ class list {
  public:
   list();
   list(size_t count, const int& value = int());
+  list(const list& other);
 
   ~list();
   list& operator=(const list& other);
@@ -32,10 +33,24 @@ class list {
   void unique();
   void sort();
 
-  // Your code goes here?..
 
  private:
-  // Your code goes here...
+  struct Node;
+
+  static void HoareSort(Node*& nodes, size_t size);
+
+  struct Node {
+    // Note: task.md says I need to implement list only for int.
+    using ElementType = int;
+
+    Node* previous_;
+    Node* next_;
+    ElementType value_;
+  };
+
+  Node* head_;
+  Node* tail_;
+  size_t size_;
 };
 
 }  // namespace task
