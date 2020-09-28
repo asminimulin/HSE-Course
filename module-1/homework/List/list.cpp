@@ -217,6 +217,7 @@ void task::list::swap(task::list& other) {
 
 void task::list::remove(const int& value) {
   Node* cur = head_;
+  Node* delete_later = nullptr;
   while (cur != nullptr) {
     if (cur->value_ == value) {
       if (cur->previous_ != nullptr) {
@@ -233,12 +234,19 @@ void task::list::remove(const int& value) {
       if (cur == tail_) {
         tail_ = cur->previous_;
       }
-      delete cur;
+      if (std::addressof(value) != std::addressof(cur->value_)) {
+        delete cur;
+      } else {
+        delete_later = cur;
+      }
       cur = next;
       size_--;
     } else {
       cur = cur->next_;
     }
+  }
+  if (delete_later != nullptr) {
+    delete delete_later;
   }
 }
 
