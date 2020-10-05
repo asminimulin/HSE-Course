@@ -150,6 +150,10 @@ class BigInteger {
   static std::vector<uint32_t> SubtractAbsoluteValues(
       const std::vector<uint32_t>& left, const std::vector<uint32_t>& right);
 
+  static void IncrementAbsoluteValue(std::vector<uint32_t>& limbs);
+
+  static void DecrementAbsoluteValue(std::vector<uint32_t>& limbs);
+
   static std::vector<uint32_t> MultiplyAbsoluteValues(
       const std::vector<uint32_t>& left, const std::vector<uint32_t>& right);
 

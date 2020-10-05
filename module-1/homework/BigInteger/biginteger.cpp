@@ -10,10 +10,8 @@
 
 big_integer::BigInteger::BigInteger() : is_negative_(false), limbs_{0} {}
 
-big_integer::BigInteger::BigInteger(int value) {
-  is_negative_ = value < 0;
-  limbs_.push_back(uint32_t(std::abs(value)));
-}
+big_integer::BigInteger::BigInteger(int value)
+    : is_negative_(value < 0), limbs_({uint32_t(std::abs(value))}) {}
 
 big_integer::BigInteger::BigInteger(const big_integer::BigInteger& other) =
     default;
@@ -23,23 +21,9 @@ big_integer::BigInteger::BigInteger(big_integer::BigInteger&& other) noexcept
 
 big_integer::BigInteger big_integer::BigInteger::operator+(
     const big_integer::BigInteger& other) const {
-  if (is_negative_ == other.is_negative_) {
-    return BigInteger(is_negative_,
-                      SummarizeAbsoluteValues(limbs_, other.limbs_));
-  } else {
-    auto compare_result = CompareAbsoluteValues(limbs_, other.limbs_);
-    if (compare_result == CompareResult::LESS) {
-      return BigInteger(!is_negative_,
-                        SubtractAbsoluteValues(other.limbs_, limbs_));
-    } else if (compare_result == CompareResult::GREATER) {
-      return BigInteger(is_negative_,
-                        SubtractAbsoluteValues(limbs_, other.limbs_));
-    } else if (compare_result == CompareResult::EQUAL) {
-      return 0;
-    } else {
-      throw std::runtime_error("Comparing result has unexpected value.");
-    }
-  }
+  BigInteger result(*this);
+  result += other;
+  return result;
 }
 
 uint32_t big_integer::BigInteger::GetHighPart(uint64_t value) noexcept {
@@ -52,23 +36,9 @@ uint32_t big_integer::BigInteger::GetLowPart(uint64_t value) noexcept {
 
 big_integer::BigInteger big_integer::BigInteger::operator-(
     const big_integer::BigInteger& other) const {
-  if (is_negative_ != other.is_negative_) {
-    return BigInteger(is_negative_,
-                      SummarizeAbsoluteValues(limbs_, other.limbs_));
-  } else {
-    auto compare_result = CompareAbsoluteValues(limbs_, other.limbs_);
-    if (compare_result == CompareResult::LESS) {
-      return BigInteger(!is_negative_,
-                        SubtractAbsoluteValues(other.limbs_, limbs_));
-    } else if (compare_result == CompareResult::GREATER) {
-      return BigInteger(is_negative_,
-                        SubtractAbsoluteValues(limbs_, other.limbs_));
-    } else if (compare_result == CompareResult::EQUAL) {
-      return 0;
-    } else {
-      throw std::runtime_error("Comparing result has unexpected value");
-    }
-  }
+  auto result = *this;
+  result -= other;
+  return result;
 }
 
 big_integer::BigInteger::CompareResult
@@ -139,6 +109,7 @@ std::vector<uint32_t> big_integer::BigInteger::SubtractAbsoluteValues(
     }
     pos++;
   }
+
   while (pos < left.size() && borrow == 1) {
     if (left[pos] >= borrow) {
       result[pos] = uint32_t(left[pos] - borrow);
@@ -149,19 +120,54 @@ std::vector<uint32_t> big_integer::BigInteger::SubtractAbsoluteValues(
     }
     pos++;
   }
+
   while (pos < left.size()) {
     result[pos] = left[pos];
     ++pos;
   }
+
   Normalize(result);
+
   if (result.empty()) {
     throw std::runtime_error("Unexpected empty result of subtraction");
   }
+
   return result;
 }
 
+void big_integer::BigInteger::IncrementAbsoluteValue(
+    std::vector<uint32_t>& limbs) {
+  uint64_t carry = 1;
+  size_t pos = 0;
+  while (carry != 0 && pos < limbs.size()) {
+    auto limbs_sum = carry + uint64_t(limbs[pos]);
+    limbs[pos] = GetLowPart(limbs_sum);
+    carry = GetHighPart(limbs_sum);
+    pos++;
+  }
+  if (carry) {
+    limbs.push_back(carry);
+  }
+}
+
+void big_integer::BigInteger::DecrementAbsoluteValue(
+    std::vector<uint32_t>& limbs) {
+  // It is private function and it is assumed that limbs > 1
+  for (uint32_t& limb : limbs) {
+    if (limb == 0) {
+      limb = std::numeric_limits<uint32_t>::max();
+    } else {
+      limb--;
+      break;
+    }
+  }
+  Normalize(limbs);
+}
+
 big_integer::BigInteger big_integer::BigInteger::operator-() const {
-  if (IsZeroed()) return *this;
+  if (IsZeroed()) {
+    return *this;
+  }
   return big_integer::BigInteger(!is_negative_, limbs_);
 }
 
@@ -171,47 +177,94 @@ big_integer::BigInteger big_integer::BigInteger::operator+() const {
 
 big_integer::BigInteger& big_integer::BigInteger::operator+=(
     const big_integer::BigInteger& other) {
-  auto sum = *this + other;
-  this->is_negative_ = sum.is_negative_;
-  this->limbs_ = std::move(sum.limbs_);
+  if (is_negative_ == other.is_negative_) {
+    limbs_ = SummarizeAbsoluteValues(limbs_, other.limbs_);
+  } else {
+    auto compare_result = CompareAbsoluteValues(limbs_, other.limbs_);
+    if (compare_result == CompareResult::LESS) {
+      is_negative_ = !is_negative_;
+      limbs_ = SubtractAbsoluteValues(other.limbs_, limbs_);
+    } else if (compare_result == CompareResult::GREATER) {
+      limbs_ = SubtractAbsoluteValues(limbs_, other.limbs_);
+    } else if (compare_result == CompareResult::EQUAL) {
+      is_negative_ = false;
+      limbs_ = {0};
+    } else {
+      throw std::runtime_error("Comparing result has unexpected value.");
+    }
+  }
   return *this;
 }
 
 big_integer::BigInteger& big_integer::BigInteger::operator-=(
     const big_integer::BigInteger& other) {
-  auto subtraction_result = *this - other;
-  this->is_negative_ = subtraction_result.is_negative_;
-  this->limbs_ = std::move(subtraction_result.limbs_);
+  if (is_negative_ != other.is_negative_) {
+    limbs_ = SummarizeAbsoluteValues(limbs_, other.limbs_);
+  } else {
+    auto compare_result = CompareAbsoluteValues(limbs_, other.limbs_);
+    if (compare_result == CompareResult::LESS) {
+      is_negative_ = !is_negative_;
+      limbs_ = SubtractAbsoluteValues(other.limbs_, limbs_);
+    } else if (compare_result == CompareResult::GREATER) {
+      limbs_ = SubtractAbsoluteValues(limbs_, other.limbs_);
+    } else if (compare_result == CompareResult::EQUAL) {
+      is_negative_ = false;
+      limbs_ = {0};
+    } else {
+      throw std::runtime_error("Comparing result has unexpected value");
+    }
+  }
   return *this;
 }
 
 big_integer::BigInteger& big_integer::BigInteger::operator*=(
     const big_integer::BigInteger& other) {
-  auto multiplication = *this * other;
-  this->is_negative_ = multiplication.is_negative_;
-  this->limbs_ = std::move(multiplication.limbs_);
+  if (this->IsZeroed() || other.IsZeroed()) {
+    is_negative_ = false;
+    limbs_ = {0};
+  } else {
+    is_negative_ = this->is_negative_ != other.is_negative_;
+    limbs_ =
+        MultiplyAbsoluteValuesWithKaratsubaAlgo(this->limbs_, other.limbs_);
+  }
   return *this;
 }
 
 big_integer::BigInteger& big_integer::BigInteger::operator/=(
     const big_integer::BigInteger& other) {
-  auto division = *this / other;
-  this->limbs_ = std::move(division.limbs_);
-  this->is_negative_ = division.is_negative_;
+  if (other.IsZeroed()) {
+    throw std::logic_error("Division by zero");
+  }
+
+  is_negative_ = this->is_negative_ != other.is_negative_;
+  limbs_ = DivideAbsoluteValues(this->limbs_, other.limbs_).first;
+
+  if (IsZeroed()) {
+    is_negative_ = false;
+  }
+
   return *this;
 }
 
 big_integer::BigInteger& big_integer::BigInteger::operator%=(
     const big_integer::BigInteger& other) {
-  auto modulo = *this % other;
-  this->is_negative_ = modulo.is_negative_;
-  this->limbs_ = std::move(modulo.limbs_);
+  if (other.IsZeroed()) {
+    throw std::logic_error("Division by zero");
+  }
+
+  limbs_ = DivideAbsoluteValues(this->limbs_, other.limbs_).second;
+
+  if (IsZeroed()) {
+    is_negative_ = false;
+  }
+
   return *this;
 }
 
 bool big_integer::BigInteger::operator<(
     const big_integer::BigInteger& other) const noexcept {
   auto compare_result = CompareAbsoluteValues(this->limbs_, other.limbs_);
+
   if (this->is_negative_ && other.is_negative_) {
     return compare_result == CompareResult::GREATER;
   } else if (this->is_negative_ && !other.is_negative_) {
@@ -227,6 +280,7 @@ bool big_integer::BigInteger::operator<(
 bool big_integer::BigInteger::operator<=(
     const big_integer::BigInteger& other) const noexcept {
   auto compare_result = CompareAbsoluteValues(this->limbs_, other.limbs_);
+
   if (this->is_negative_ && other.is_negative_) {
     return (compare_result == CompareResult::GREATER) ||
            (compare_result == CompareResult::EQUAL);
@@ -243,22 +297,30 @@ bool big_integer::BigInteger::operator<=(
 
 bool big_integer::BigInteger::operator>(
     const big_integer::BigInteger& other) const noexcept {
+  // Careful here
+  // l > r is the same as r < l
   return other < *this;
 }
 
 bool big_integer::BigInteger::operator>=(
     const big_integer::BigInteger& other) const noexcept {
+  // Careful here
+  // l >= r is the same as !(l < r)
   return !(*this < other);
 }
 
 bool big_integer::BigInteger::operator==(
     const big_integer::BigInteger& other) const noexcept {
-  if (is_negative_ != other.is_negative_) return false;
+  if (is_negative_ != other.is_negative_) {
+    return false;
+  }
   return limbs_ == other.limbs_;
 }
 
 bool big_integer::BigInteger::operator!=(
     const big_integer::BigInteger& other) const noexcept {
+  // Careful here
+  // l != r is the same as !(l == r)
   return !(*this == other);
 }
 
@@ -269,24 +331,38 @@ big_integer::BigInteger::operator bool() const noexcept {
 big_integer::BigInteger  // NOLINT(cert-dcl21-cpp)
 big_integer::BigInteger::operator--(int) {
   auto result = *this;
-  *this = *this - BigInteger(1);
+  --*this;
   return result;
 }
 
 big_integer::BigInteger  // NOLINT(cert-dcl21-cpp)
 big_integer::BigInteger::operator++(int) {
   auto result = *this;
-  *this = *this + BigInteger(1);
+  ++*this;
   return result;
 }
 
 big_integer::BigInteger& big_integer::BigInteger::operator++() {
-  *this = *this + BigInteger(1);
+  if (is_negative_) {
+    DecrementAbsoluteValue(limbs_);
+    if (IsZeroed()) {
+      is_negative_ = false;
+    }
+  } else {
+    IncrementAbsoluteValue(limbs_);
+  }
   return *this;
 }
 
 big_integer::BigInteger& big_integer::BigInteger::operator--() {
-  *this = *this - BigInteger(1);
+  if (IsZeroed()) {
+    is_negative_ = true;
+    IncrementAbsoluteValue(limbs_);
+  } else if (is_negative_) {
+    IncrementAbsoluteValue(limbs_);
+  } else {
+    DecrementAbsoluteValue(limbs_);
+  }
   return *this;
 }
 
@@ -405,40 +481,22 @@ big_integer::BigInteger::BigInteger(bool is_negative,
 
 big_integer::BigInteger big_integer::BigInteger::operator*(
     const big_integer::BigInteger& other) const {
-  if (this->IsZeroed() || other.IsZeroed()) {
-    return 0;
-  }
-  auto result = big_integer::BigInteger(
-      this->is_negative_ != other.is_negative_,
-      MultiplyAbsoluteValuesWithKaratsubaAlgo(this->limbs_, other.limbs_));
+  auto result = *this;
+  result *= other;
   return result;
 }
 
 big_integer::BigInteger big_integer::BigInteger::operator/(
     const big_integer::BigInteger& other) const {
-  if (other.IsZeroed()) {
-    throw std::logic_error("Division by zero");
-  }
-  auto result = big_integer::BigInteger(
-      this->is_negative_ != other.is_negative_,
-      DivideAbsoluteValues(this->limbs_, other.limbs_).first);
-  if (result.IsZeroed()) {
-    result.is_negative_ = false;
-  }
+  auto result = *this;
+  result /= other;
   return result;
 }
 
 big_integer::BigInteger big_integer::BigInteger::operator%(
     const big_integer::BigInteger& other) const {
-  if (other.IsZeroed()) {
-    throw std::logic_error("Division by zero");
-  }
-  auto result = big_integer::BigInteger(
-      this->is_negative_,
-      DivideAbsoluteValues(this->limbs_, other.limbs_).second);
-  if (result.IsZeroed()) {
-    result.is_negative_ = false;
-  }
+  auto result = *this;
+  result %= other;
   return result;
 }
 
