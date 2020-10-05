@@ -212,27 +212,43 @@ big_integer::BigInteger& big_integer::BigInteger::operator%=(
 bool big_integer::BigInteger::operator<(
     const big_integer::BigInteger& other) const noexcept {
   auto compare_result = CompareAbsoluteValues(this->limbs_, other.limbs_);
-  return compare_result == CompareResult::LESS;
+  if (this->is_negative_ && other.is_negative_) {
+    return compare_result == CompareResult::GREATER;
+  } else if (this->is_negative_ && !other.is_negative_) {
+    return true;
+  } else if (!this->is_negative_ && other.is_negative_) {
+    return false;
+  } else {
+    return compare_result == CompareResult::LESS;
+  }
+  throw std::runtime_error("Universe collapse");
 }
 
 bool big_integer::BigInteger::operator<=(
     const big_integer::BigInteger& other) const noexcept {
   auto compare_result = CompareAbsoluteValues(this->limbs_, other.limbs_);
-  return compare_result == CompareResult::LESS ||
-         compare_result == CompareResult::EQUAL;
+  if (this->is_negative_ && other.is_negative_) {
+    return (compare_result == CompareResult::GREATER) ||
+           (compare_result == CompareResult::EQUAL);
+  } else if (this->is_negative_ && !other.is_negative_) {
+    return true;
+  } else if (!this->is_negative_ && other.is_negative_) {
+    return false;
+  } else {
+    return (compare_result == CompareResult::LESS) ||
+           (compare_result == CompareResult::EQUAL);
+  }
+  throw std::runtime_error("Universe collapse");
 }
 
 bool big_integer::BigInteger::operator>(
     const big_integer::BigInteger& other) const noexcept {
-  auto compare_result = CompareAbsoluteValues(this->limbs_, other.limbs_);
-  return compare_result == CompareResult::GREATER;
+  return other < *this;
 }
 
 bool big_integer::BigInteger::operator>=(
     const big_integer::BigInteger& other) const noexcept {
-  auto compare_result = CompareAbsoluteValues(this->limbs_, other.limbs_);
-  return compare_result == CompareResult::GREATER ||
-         compare_result == CompareResult::EQUAL;
+  return !(*this < other);
 }
 
 bool big_integer::BigInteger::operator==(
@@ -243,8 +259,7 @@ bool big_integer::BigInteger::operator==(
 
 bool big_integer::BigInteger::operator!=(
     const big_integer::BigInteger& other) const noexcept {
-  auto compare_result = CompareAbsoluteValues(this->limbs_, other.limbs_);
-  return compare_result != CompareResult::EQUAL;
+  return !(*this == other);
 }
 
 big_integer::BigInteger::operator bool() const noexcept {
