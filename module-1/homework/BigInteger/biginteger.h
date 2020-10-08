@@ -9,14 +9,13 @@
 
 namespace big_integer {
 
-// fixme: Think about removing redundant templated declarations
 class BigInteger {
  public:
   BigInteger();
 
-  BigInteger(std::string_view string);  // NOLINT(google-explicit-constructor)
+  BigInteger(std::string_view string);
 
-  BigInteger(int value);  // NOLINT(google-explicit-constructor)
+  BigInteger(int value);
 
   BigInteger(const BigInteger& other);
 
@@ -26,47 +25,23 @@ class BigInteger {
 
   BigInteger& operator=(BigInteger&& other) noexcept = default;
 
-  template <typename T>
-  BigInteger operator+(const T& other) const {
-    return *this + BigInteger(other);
-  }
-
   BigInteger operator+(const BigInteger& other) const;
 
   BigInteger operator-(const BigInteger& other) const;
-  template <typename T>
-
-  BigInteger operator-(const T& other) const {
-    return *this - BigInteger(other);
-  }
 
   BigInteger operator*(const BigInteger& other) const;
-  template <typename T>
-  BigInteger operator*(const T& other) const {
-    return *this * BigInteger(other);
-  }
 
   BigInteger operator/(const BigInteger& other) const;
 
-  template <typename T>
-  BigInteger operator/(const T& other) const {
-    return *this / BigInteger(other);
-  }
-
   BigInteger operator%(const BigInteger& other) const;
-  template <typename T>
-
-  BigInteger operator%(const T& other) const {
-    return *this % BigInteger(other);
-  }
 
   BigInteger& operator++();
 
-  BigInteger operator++(int);  // NOLINT(cert-dcl21-cpp)
+  BigInteger operator++(int);
 
   BigInteger& operator--();
 
-  BigInteger operator--(int);  // NOLINT(cert-dcl21-cpp)
+  BigInteger operator--(int);
 
   BigInteger operator-() const;
 
@@ -82,49 +57,19 @@ class BigInteger {
 
   BigInteger& operator%=(const BigInteger& other);
 
-  template <typename T>
-  bool operator<(const T& other) const {
-    return *this < BigInteger(other);
-  }
-
   bool operator<(const BigInteger& other) const noexcept;
-
-  template <typename T>
-  bool operator<=(const T& other) const {
-    return *this <= BigInteger(other);
-  }
 
   bool operator<=(const BigInteger& other) const noexcept;
 
   bool operator>(const BigInteger& other) const noexcept;
 
-  template <typename T>
-  bool operator>(const T& other) const {
-    return *this > BigInteger(other);
-  }
-
   bool operator>=(const BigInteger& other) const noexcept;
-
-  template <typename T>
-  bool operator>=(const T& other) const {
-    return *this >= BigInteger(other);
-  }
 
   bool operator==(const BigInteger& other) const noexcept;
 
-  template <typename T>
-  bool operator==(const T& other) const {
-    return *this == BigInteger(other);
-  }
-
   bool operator!=(const BigInteger& other) const noexcept;
 
-  template <typename T>
-  bool operator!=(const T& other) const {
-    return *this != BigInteger(other);
-  }
-
-  operator bool() const noexcept;  // NOLINT(google-explicit-constructor)
+  explicit operator bool() const noexcept;
 
   [[nodiscard]] std::string toString() const;
 
