@@ -595,7 +595,9 @@ big_integer::BigInteger big_integer::BigInteger::operator%(
 }
 
 std::string big_integer::BigInteger::toString() const {
-  if (IsZeroed()) return "0";
+  if (IsZeroed()) {
+    return "0";
+  }
   std::string result;
 
   if (is_negative_) {
@@ -637,7 +639,9 @@ void big_integer::BigInteger::ShiftLimbsRight(std::vector<uint32_t>& limbs,
 
 void big_integer::BigInteger::ShiftBitsLeft(std::vector<uint32_t>& limbs,
                                             size_t count) {
-  if (count == 0) return;
+  if (count == 0) {
+    return;
+  }
   auto limbs_count = count / (sizeof(uint32_t) * 8U);
   ShiftLimbsLeft(limbs, limbs_count);
 
@@ -658,7 +662,9 @@ void big_integer::BigInteger::ShiftBitsLeft(std::vector<uint32_t>& limbs,
 
 void big_integer::BigInteger::ShiftBitsRight(std::vector<uint32_t>& limbs,
                                              long count) {
-  if (count == 0) return;
+  if (count == 0) {
+    return;
+  }
   auto limbs_count = count / long(sizeof(uint32_t) * 8U);
   ShiftLimbsRight(limbs, limbs_count);
 
