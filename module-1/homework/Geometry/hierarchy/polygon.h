@@ -184,6 +184,12 @@ protected:
   static void Normalize(std::vector<Point> &vertices) noexcept;
 
   /**
+   * @brief Protected constructor for usage in children who extends Polygon
+   * interface
+   */
+  Polygon() = default;
+
+  /**
    * @brief Polygon's vertices.
    *
    * @details It is assumed that first Point is lexicographically minimal
