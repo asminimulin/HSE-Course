@@ -1,13 +1,13 @@
 #include "point.h"
-#include "common.hpp"
 #include "Vector2.hpp"
+#include "common.hpp"
 
 Point::Point() : x(0), y(0) {}
 
-Point::Point(double x, double y): x(x), y(y) {}
+Point::Point(double x, double y) : x(x), y(y) {}
 
 bool Point::operator==(const Point &other) const {
-    return common::eq(this->x, other.x) && common::eq(this->y, other.y);
+  return common::eq(this->x, other.x) && common::eq(this->y, other.y);
 }
 
 bool Point::operator!=(const Point &other) const {
@@ -18,4 +18,8 @@ Point Point::reflected(const Point &center) {
   Vector2 vec(*this, center);
   vec *= 2;
   return Point{x + vec.x, y + vec.y};
+}
+bool Point::lexicographically_less(const Point &other) const noexcept {
+  return common::lt(x, other.x) ||
+         (common::eq(x, other.x) && common::lt(y, other.y));
 }

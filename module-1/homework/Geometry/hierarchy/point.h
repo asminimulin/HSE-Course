@@ -73,6 +73,9 @@ struct Point {
      */
     Point reflected(const Point& center);
 
+
+    bool lexicographically_less(const Point& other) const noexcept;
+
     /**
      * @brief The value of coordinate on OX axis
      */
