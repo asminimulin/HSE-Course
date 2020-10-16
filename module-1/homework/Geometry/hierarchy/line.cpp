@@ -1,6 +1,10 @@
 #include "line.h"
 #include "common.hpp"
 
+/**
+ * @details I do not use division because I do not want to think about
+ * any coefficient that could be zeroed
+ */
 bool Line::operator==(const Line &other) const {
   /*
    * a1x + b1y + c1 = 0
@@ -44,4 +48,21 @@ std::pair<Point, Point> Line::Get2Points() const noexcept {
     Point B(x, (-c_ - a_ * x) / b_);
     return {A, B};
   }
+}
+
+/**
+ * @details I do not use divisions because I do not want to check if
+ * any coefficient is equal to zero
+ */
+bool Line::hasIntersection(const Line &line) const noexcept {
+
+  bool is_parallel = common::eq(a_ * line.b_, b_ * line.a_) &&
+    common::eq(b_ * line.c_, c_ * line.b_) &&
+    common::eq(c_ * line.a_, a_ * line.c_);
+
+  if (is_parallel) {
+    return common::eq(c_, line.c_);
+  }
+
+  return true;
 }
