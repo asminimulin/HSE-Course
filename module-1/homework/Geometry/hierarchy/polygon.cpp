@@ -7,6 +7,8 @@
 #include <utility>
 
 #include "common.hpp"
+#include "ray.h"
+#include "segment.h"
 
 Polygon::Polygon(std::vector<Point> vertices) : vertices_(std::move(vertices)) {
   if (vertices_.size() < 3) {
@@ -184,7 +186,20 @@ bool Polygon::isSimilarTo(const Shape &other) const noexcept {
 }
 
 bool Polygon::containsPoint(Point point) const noexcept {
-  Line l
+  // fixme: add random point choice
+  Ray ray(point, Vector2{242423234.0, 23423842.0});
+
+  bool is_inside = false;
+
+  for (auto i = 0; i < vertices_.size(); ++i) {
+    auto A = vertices_[i];
+    auto B = vertices_[(i + 1) % vertices_.size()];
+
+    if (ray.hasIntersection(Segment{A, B})) {
+      is_inside ^= true;
+    }
+  }
+  return is_inside;
 }
 
 void Polygon::rotate(Point center, double angle) noexcept {
