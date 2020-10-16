@@ -63,6 +63,15 @@ struct Vector2 {
   }
 
   /**
+   * @brief Multiplies copy of this vector by factor
+   *
+   * @return Copy of this vector multiplied by factor
+   */
+  inline Vector2 operator*(double factor) const noexcept {
+    return Vector2{x * factor, y * factor};
+  }
+
+  /**
    * @brief vector production
    *
    * @param other
@@ -100,6 +109,41 @@ struct Vector2 {
     auto length_ = length();
     x /= length_;
     y /= length_;
+  }
+
+  /**
+   * @brief Normalizes copy of this vector
+   *
+   * @return Normalized copy of this vector
+   */
+  inline Vector2 normalized() const noexcept {
+    auto result = *this;
+    result.normalize();
+    return result;
+  }
+
+  /**
+   * @brief Rotates this vector by angle
+   *
+   * @param angle Angle in radians
+   */
+  inline void rotate(const double angle) noexcept {
+    auto new_x = std::cos(angle) * x - std::sin(angle) * y;
+    y = std::sin(angle) * x + std::cos(angle) * y;
+    x = new_x;
+  }
+
+  /**
+   * @brief Rotates copy of this vector by angle
+   *
+   * @param angle Angle in radians
+   *
+   * @return Copy of this vector rotated by angle
+   */
+  inline Vector2 rotated(const double angle) const noexcept {
+    auto result = *this;
+    result.rotate(angle);
+    return result;
   }
 
   /**
