@@ -249,7 +249,7 @@ void Polygon::scale(Point center, double coefficient) noexcept {
   Normalize(vertices_);
 }
 
-void Polygon::Normalize(std::vector<Point> &vertices) {
+void Polygon::Normalize(std::vector<Point> &vertices) noexcept {
 
   auto lexicographical_less = [](const Point &a, const Point &b) {
     return common::lt(a.x, b.x) ||

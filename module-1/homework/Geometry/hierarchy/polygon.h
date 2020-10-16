@@ -171,7 +171,17 @@ public:
   ~Polygon() noexcept override = default;
 
 protected:
-  static void Normalize(std::vector<Point> &vertices);
+  /**
+   * @brief Normalize internal points representation
+   *
+   * It implements vertices reordering to support this invariant:
+   * 1) first vertex is the most left and the lowest among the most left.
+   * 2) The second vertex is the vertex which should the next right after first
+   *    in counter clockwise (a.k.a mathematically positive) order
+   *
+   * @param vertices
+   */
+  static void Normalize(std::vector<Point> &vertices) noexcept;
 
   /**
    * @brief Polygon's vertices.
