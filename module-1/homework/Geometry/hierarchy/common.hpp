@@ -47,6 +47,16 @@ inline bool gt(const double a, const double b) {
     return a - EPSILON > b;
 }
 
+/**
+ * Checks if a greater or equal to b
+ * @param a
+ * @param b
+ * @return True if a >= b, false otherwise
+ */
+inline bool ge(const double a, const double b) {
+  return a > b - EPSILON;
+}
+
 
 /**
  * @brief Check if a is equal to b
