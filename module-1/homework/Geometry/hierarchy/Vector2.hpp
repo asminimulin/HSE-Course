@@ -42,6 +42,7 @@ struct Vector2 {
    * @brief Scalar production
    *
    * @param other Second vector
+   *
    * @return Value of scalar production
    */
   inline double operator*(const Vector2& other) const noexcept {
@@ -49,9 +50,23 @@ struct Vector2 {
   }
 
   /**
+   * @brief Multiplies vector by factor
+   *
+   * @param factor
+   *
+   * @return Result vector
+   */
+  inline Vector2& operator*=(double factor) {
+    x *= factor;
+    y *= factor;
+    return *this;
+  }
+
+  /**
    * @brief vector production
    *
    * @param other
+   *
    * @return Value of vector production
    */
   inline double operator^(const Vector2& other) const noexcept {
@@ -66,7 +81,7 @@ struct Vector2 {
    *
    * @return Angle between vectors
    */
-  static double getAngle(const Vector2& a, const Vector2& b) noexcept {
+  static inline double getAngle(const Vector2& a, const Vector2& b) noexcept {
     auto scalar_production = a * b;
     if (common::ne(scalar_production, 0)) {
       return std::acos(scalar_production / (a.length() * b.length()));
@@ -79,7 +94,13 @@ struct Vector2 {
    * @brief Calculates length of vector
    * @return Length of vector
    */
-  double length() const noexcept { return std::sqrt(x * x + y * y); }
+  inline double length() const noexcept { return std::sqrt(x * x + y * y); }
+
+  inline void normalize() noexcept {
+    auto length_ = length();
+    x /= length_;
+    y /= length_;
+  }
 
   /**
    * @brief Value of coordinate on OX axis
