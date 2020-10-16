@@ -183,7 +183,9 @@ bool Polygon::isSimilarTo(const Shape &other) const noexcept {
   return true;
 }
 
-bool Polygon::containsPoint(Point point) const noexcept { return false; }
+bool Polygon::containsPoint(Point point) const noexcept {
+  Line l
+}
 
 void Polygon::rotate(Point center, double angle) noexcept {
   angle = common::DegreesToRadians(angle);
@@ -192,9 +194,9 @@ void Polygon::rotate(Point center, double angle) noexcept {
     auto x_centerized = point.x - center.x;
     auto y_centerized = point.y - center.y;
     auto new_x = center.x + (std::cos(angle) * x_centerized -
-        std::sin(angle) * y_centerized);
+                             std::sin(angle) * y_centerized);
     auto new_y = center.y + (std::sin(angle) * x_centerized +
-        std::cos(angle) * y_centerized);
+                             std::cos(angle) * y_centerized);
     point = {new_x, new_y};
   }
 
@@ -202,7 +204,7 @@ void Polygon::rotate(Point center, double angle) noexcept {
 }
 
 void Polygon::reflex(Point center) noexcept {
-  for (auto& point : vertices_) {
+  for (auto &point : vertices_) {
     auto move = Vector2(point, center);
     move *= 2;
     point = {point.x + move.x, point.y + move.y};
@@ -213,35 +215,34 @@ void Polygon::reflex(Point center) noexcept {
 void Polygon::reflex(Line line) noexcept {
   Point A, B;
   std::tie(A, B) = line.Get2Points();
-  for (auto& point: vertices_) {
+  for (auto &point : vertices_) {
 
     // Get Q
     Vector2 pa(point, A);
     Vector2 pb(point, B);
     Vector2 ab(A, B);
 
-    auto PQ_length = (pa ^ pb) / ab.length();
-    auto AQ_length = std::sqrt(pa.length() - PQ_length);
+    auto PQ_length = std::abs(pa ^ pb) / ab.length();
 
-    auto ab_normalized = ab;
-    ab_normalized.normalize();
+    // Try one direction
+    auto pq = ab.rotated(common::PI / 2) * (PQ_length / ab.length());
+    Point Q(point.x + pq.x, point.y + pq.y);
+    auto result = point.reflected(Q);
 
-    auto aq = ab_normalized;
-    aq *= AQ_length;
+    if (common::gt(ab ^ Vector2(A, result), 0) ==
+        common::gt(ab ^ Vector2(A, point), 0)) {
+      pq *= -1;
+      Q = {point.x + pq.x, point.y + pq.y};
+      result = point.reflected(Q);
+    }
 
-    Point Q(A.x + aq.x, A.y + aq.y);
-
-    // Reflex point by Q
-    Vector2 move(point, Q);
-    move *= 2;
-
-    point = {point.x + move.x, point.y + move.y};
+    point = result;
   }
   Normalize(vertices_);
 }
 
 void Polygon::scale(Point center, double coefficient) noexcept {
-  for (auto& point : vertices_) {
+  for (auto &point : vertices_) {
     auto new_x = coefficient * point.x + (1 - coefficient) * center.x;
     auto new_y = coefficient * point.y + (1 - coefficient) * center.y;
     point = {new_x, new_y};
@@ -253,11 +254,11 @@ void Polygon::Normalize(std::vector<Point> &vertices) noexcept {
 
   auto lexicographical_less = [](const Point &a, const Point &b) {
     return common::lt(a.x, b.x) ||
-        (common::eq(a.x, b.x) && common::lt(a.y, b.y));
+           (common::eq(a.x, b.x) && common::lt(a.y, b.y));
   };
 
-  auto min_vertex_it = std::min_element(vertices.begin(), vertices.end(),
-                                        lexicographical_less);
+  auto min_vertex_it =
+      std::min_element(vertices.begin(), vertices.end(), lexicographical_less);
 
   if (min_vertex_it != vertices.begin()) {
     // Move subarray to the end of vector
