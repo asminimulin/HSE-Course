@@ -65,6 +65,15 @@ struct Point {
     bool operator!=(const Point &other) const;
 
     /**
+     * @brief Reflexes copy of this point by center
+     *
+     * @param center Center of reflection
+     *
+     * @return Reflected copy of this point by center
+     */
+    Point reflected(const Point& center);
+
+    /**
      * @brief The value of coordinate on OX axis
      */
     double x;
