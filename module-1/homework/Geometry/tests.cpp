@@ -215,50 +215,50 @@ TEST(ContainsPoint, Test1) {
     ASSERT_TRUE(poly.containsPoint(Point(1.5, 1)));
 }
 
-//TEST(ContainsPoint, Test2) {
-//    Point a(-1.0, 0.0);
-//    Point b(1.0, 0.0);
-//
-//    Ellipse ellipse(a, b, 4);
-//    ASSERT_TRUE(ellipse.containsPoint(Point(0, 0)));
-//}
-//
-//TEST(Ellipse, Eccentricity) {
-//    Point a(-1.0, 0.0);
-//    Point b(1.0, 0.0);
-//    Ellipse ellipse(a, b, 4);
-//
-//    double eccentricity = 0.5;
-//    ASSERT_NEAR(ellipse.eccentricity(), eccentricity, 1e-6);
-//}
-//
-//TEST(Ellipse, Perimeter) {
-//    double a = 5;
-//    double b = 4;
-//    double c = 3;
-//
-//    Point p1(-c, 0.0);
-//    Point p2(c, 0.0);
-//    Ellipse ellipse(p1, p2, 2 * a);
-//    double pi = 3.1415926;
-//
-//    double perimeter = 4 * (pi * a * b + (a - b)) / (a + b);
-//    ASSERT_NEAR(ellipse.perimeter(), perimeter, 1e-6);
-//}
-//
-//TEST(Ellipse, Area) {
-//    double a = 5;
-//    double b = 4;
-//    double c = 3;
-//
-//    Point p1(-c, 0.0);
-//    Point p2(c, 0.0);
-//    Ellipse ellipse(p1, p2, 2 * a);
-//    double pi = 3.1415926;
-//
-//    double area = pi * a * b;
-//    ASSERT_NEAR(ellipse.area(), area, 1e-6);
-//}
+TEST(ContainsPoint, Test2) {
+    Point a(-1.0, 0.0);
+    Point b(1.0, 0.0);
+
+    Ellipse ellipse(a, b, 4);
+    ASSERT_TRUE(ellipse.containsPoint(Point(0, 0)));
+}
+
+TEST(Ellipse, Eccentricity) {
+    Point a(-1.0, 0.0);
+    Point b(1.0, 0.0);
+    Ellipse ellipse(a, b, 4);
+
+    double eccentricity = 0.5;
+    ASSERT_NEAR(ellipse.eccentricity(), eccentricity, 1e-6);
+}
+
+TEST(Ellipse, Perimeter) {
+    double a = 5;
+    double b = 4;
+    double c = 3;
+
+    Point p1(-c, 0.0);
+    Point p2(c, 0.0);
+    Ellipse ellipse(p1, p2, 2 * a);
+    double pi = 3.1415926;
+
+    double perimeter = 4 * (pi * a * b + (a - b)) / (a + b);
+    ASSERT_NEAR(ellipse.perimeter(), perimeter, 1e-6);
+}
+
+TEST(Ellipse, Area) {
+    double a = 5;
+    double b = 4;
+    double c = 3;
+
+    Point p1(-c, 0.0);
+    Point p2(c, 0.0);
+    Ellipse ellipse(p1, p2, 2 * a);
+    double pi = 3.1415926;
+
+    double area = pi * a * b;
+    ASSERT_NEAR(ellipse.area(), area, 1e-6);
+}
 
 int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);

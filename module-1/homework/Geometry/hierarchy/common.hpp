@@ -79,8 +79,19 @@ inline bool ne(const double a, const double b) {
     return std::abs(a - b) > EPSILON;
 }
 
+/**
+ * @brief Converts Degrees to Radians
+ *
+ * @param alpha Angle
+ *
+ * @return Angle in radians
+ */
 inline double DegreesToRadians(double alpha) {
   return alpha / 180 * PI;
+}
+
+inline bool le(const double a, const double b) {
+  return a < b + EPSILON;
 }
 
 }
