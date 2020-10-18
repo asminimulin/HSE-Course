@@ -30,6 +30,7 @@ big_integer::BigInteger::BigInteger(std::string_view string) {
       throw std::runtime_error(
           "Cannot construct BigInteger from provided string");
     }
+    // fixme: do it inplace
     *this = *this * 10 + (string[pos] - '0');
   }
 }
@@ -73,7 +74,6 @@ big_integer::BigInteger::CompareAbsoluteValues(
   } else if (left.size() > right.size()) {
     return CompareResult::GREATER;
   } else {
-
     int pos = int(left.size() - 1U);
     while (pos >= 0) {
       auto index = size_t(pos);
@@ -92,7 +92,6 @@ big_integer::BigInteger::CompareAbsoluteValues(
 
 std::vector<uint32_t> big_integer::BigInteger::SummarizeAbsoluteValues(
     const std::vector<uint32_t>& left, const std::vector<uint32_t>& right) {
-
   std::vector<uint32_t> result(std::max(left.size(), right.size()));
 
   std::size_t pos = 0;
@@ -167,7 +166,6 @@ std::vector<uint32_t> big_integer::BigInteger::SubtractAbsoluteValues(
 
 void big_integer::BigInteger::IncrementAbsoluteValue(
     std::vector<uint32_t>& limbs) {
-
   uint64_t carry = 1;
   size_t pos = 0;
   while ((carry != 0) && (pos < limbs.size())) {
@@ -210,13 +208,10 @@ big_integer::BigInteger big_integer::BigInteger::operator+() const {
 
 big_integer::BigInteger& big_integer::BigInteger::operator+=(
     const big_integer::BigInteger& other) {
-
   if (is_negative_ == other.is_negative_) {
-
     limbs_ = SummarizeAbsoluteValues(limbs_, other.limbs_);
 
   } else {
-
     auto compare_result = CompareAbsoluteValues(limbs_, other.limbs_);
 
     if (compare_result == CompareResult::LESS) {
@@ -230,66 +225,52 @@ big_integer::BigInteger& big_integer::BigInteger::operator+=(
     } else {
       throw std::runtime_error("Comparing result has unexpected value.");
     }
-
   }
   return *this;
 }
 
 big_integer::BigInteger& big_integer::BigInteger::operator-=(
     const big_integer::BigInteger& other) {
-
   if (is_negative_ != other.is_negative_) {
-
     limbs_ = SummarizeAbsoluteValues(limbs_, other.limbs_);
 
   } else {
-
     auto compare_result = CompareAbsoluteValues(limbs_, other.limbs_);
 
     if (compare_result == CompareResult::LESS) {
-
       is_negative_ = !is_negative_;
       limbs_ = SubtractAbsoluteValues(other.limbs_, limbs_);
 
     } else if (compare_result == CompareResult::GREATER) {
-
       limbs_ = SubtractAbsoluteValues(limbs_, other.limbs_);
 
     } else if (compare_result == CompareResult::EQUAL) {
-
       is_negative_ = false;
       limbs_ = {0};
 
     } else {
       throw std::runtime_error("Comparing result has unexpected value");
     }
-
   }
   return *this;
 }
 
 big_integer::BigInteger& big_integer::BigInteger::operator*=(
     const big_integer::BigInteger& other) {
-
   if (this->IsZeroed() || other.IsZeroed()) {
-
     is_negative_ = false;
     limbs_ = {0};
 
   } else {
-
     is_negative_ = this->is_negative_ != other.is_negative_;
     limbs_ =
         MultiplyAbsoluteValuesWithKaratsubaAlgo(this->limbs_, other.limbs_);
-
   }
   return *this;
-
 }
 
 big_integer::BigInteger& big_integer::BigInteger::operator/=(
     const big_integer::BigInteger& other) {
-
   if (other.IsZeroed()) {
     throw std::logic_error("Division by zero");
   }
@@ -306,7 +287,6 @@ big_integer::BigInteger& big_integer::BigInteger::operator/=(
 
 big_integer::BigInteger& big_integer::BigInteger::operator%=(
     const big_integer::BigInteger& other) {
-
   if (other.IsZeroed()) {
     throw std::logic_error("Division by zero");
   }
@@ -333,7 +313,6 @@ bool big_integer::BigInteger::operator<(
   } else {
     return compare_result == CompareResult::LESS;
   }
-  throw std::runtime_error("Universe collapse");
 }
 
 bool big_integer::BigInteger::operator<=(
@@ -341,25 +320,19 @@ bool big_integer::BigInteger::operator<=(
   auto compare_result = CompareAbsoluteValues(this->limbs_, other.limbs_);
 
   if (this->is_negative_ && other.is_negative_) {
-
     return (compare_result == CompareResult::GREATER) ||
            (compare_result == CompareResult::EQUAL);
 
   } else if (this->is_negative_ && !other.is_negative_) {
-
     return true;
 
   } else if (!this->is_negative_ && other.is_negative_) {
-
     return false;
 
   } else {
-
     return (compare_result == CompareResult::LESS) ||
            (compare_result == CompareResult::EQUAL);
-
   }
-  throw std::runtime_error("Universe collapse");
 }
 
 bool big_integer::BigInteger::operator>(
@@ -439,17 +412,12 @@ std::vector<uint32_t> big_integer::BigInteger::MultiplyAbsoluteValues(
 std::vector<uint32_t>
 big_integer::BigInteger::MultiplyAbsoluteValuesWithKaratsubaAlgo(
     const std::vector<uint32_t>& left, const std::vector<uint32_t>& right) {
-
   if (left.size() < KARATSUBA_STOP_RECURSION_SIZE) {
-
     return MultiplyAbsoluteValuesNaive(right, left);
 
   } else if (right.size() < KARATSUBA_STOP_RECURSION_SIZE) {
-
-    return MultiplyAbsoluteValuesNaive(left, right)
-
+    return MultiplyAbsoluteValuesNaive(left, right);
   } else {
-
     auto half_size = std::min(std::min(left.size(), right.size()),
                               std::max(left.size() / 2, right.size() / 2));
 
@@ -479,7 +447,6 @@ big_integer::BigInteger::MultiplyAbsoluteValuesWithKaratsubaAlgo(
     result = SummarizeAbsoluteValues(result,
                                      SummarizeAbsoluteValues(mul_ac, center));
     return result;
-
   }
 }
 
@@ -488,23 +455,19 @@ std::vector<uint32_t> big_integer::BigInteger::MultiplyAbsoluteValuesNaive(
   std::vector<uint32_t> result(shorter.size() + longer.size(), 0);
 
   for (size_t short_pos = 0; short_pos < shorter.size(); ++short_pos) {
-
     uint64_t carry = 0;
 
     for (size_t long_pos = 0; long_pos < longer.size(); ++long_pos) {
-
       uint64_t value =
           carry + uint64_t(shorter[short_pos]) * uint64_t(longer[long_pos]) +
           uint64_t(result[long_pos + short_pos]);
       result[long_pos + short_pos] = GetLowPart(value);
       carry = GetHighPart(value);
-
     }
 
     if (carry) {
       result[short_pos + longer.size()] = uint32_t(carry);
     }
-
   }
 
   Normalize(result);
@@ -514,19 +477,16 @@ std::vector<uint32_t> big_integer::BigInteger::MultiplyAbsoluteValuesNaive(
 std::pair<std::vector<uint32_t>, uint32_t>
 big_integer::BigInteger::DivideAbsoluteValueByLimb(
     const std::vector<uint32_t>& left, uint32_t right) {
-
   std::vector<uint32_t> result;
   result.resize(left.size());
 
   uint64_t carry = 0;
   int pos = int(left.size()) - 1;
   while (pos >= 0) {
-
     uint64_t cur = left[pos] + (uint64_t(carry) << (sizeof(uint32_t) * 8U));
     result[pos] = cur / right;
     carry = cur % right;
     pos--;
-
   }
 
   Normalize(result);
@@ -536,7 +496,6 @@ big_integer::BigInteger::DivideAbsoluteValueByLimb(
 std::pair<std::vector<uint32_t>, std::vector<uint32_t>>
 big_integer::BigInteger::DivideAbsoluteValues(
     const std::vector<uint32_t>& left, const std::vector<uint32_t>& right) {
-
   if (CompareAbsoluteValues(left, right) == CompareResult::LESS) {
     return {{0}, left};
   }
@@ -552,7 +511,6 @@ big_integer::BigInteger::DivideAbsoluteValues(
   }
 
   while (CompareAbsoluteValues(current_value, right) != LESS) {
-
     ShiftBitsLeft(result, 1);
 
     if (CompareAbsoluteValues(dividend, current_value) != CompareResult::LESS) {
@@ -562,7 +520,6 @@ big_integer::BigInteger::DivideAbsoluteValues(
     }
 
     ShiftBitsRight(current_value, 1);
-
   }
   return {result, dividend};
 }
@@ -606,7 +563,7 @@ std::string big_integer::BigInteger::toString() const {
 
   std::vector<uint32_t> limbs = limbs_;
   for (;;) {
-
+    // fixme: use IsZeroed() method
     if ((limbs.size() == 1U) && (limbs[0] == 0)) {
       break;
     }
@@ -614,7 +571,6 @@ std::string big_integer::BigInteger::toString() const {
     auto division_result = DivideAbsoluteValueByLimb(limbs, 10U);
     result += char(division_result.second + '0');
     std::swap(limbs, division_result.first);
-
   }
 
   if (is_negative_) {
@@ -648,11 +604,9 @@ void big_integer::BigInteger::ShiftBitsLeft(std::vector<uint32_t>& limbs,
   count %= sizeof(uint32_t) * 8U;
   uint32_t carry = 0;
   for (uint32_t& limb_value : limbs) {
-
     uint64_t new_limb_value = (uint64_t(limb_value) << count) + carry;
     limb_value = GetLowPart(new_limb_value);
     carry = GetHighPart(new_limb_value);
-
   }
 
   if (carry != 0) {
@@ -671,12 +625,10 @@ void big_integer::BigInteger::ShiftBitsRight(std::vector<uint32_t>& limbs,
   count %= sizeof(uint32_t) * 8U;
   uint32_t borrow = 0;
   for (auto i = long(limbs.size()) - 1; i >= 0; --i) {
-
     uint32_t new_limb_value = (limbs[size_t(i)] >> size_t(count)) | borrow;
     borrow = (GetLeastBitsMask(size_t(count)) & limbs[size_t(i)])
              << (sizeof(uint32_t) * 8U - size_t(count));
     limbs[size_t(i)] = new_limb_value;
-
   }
 
   Normalize(limbs);
@@ -702,8 +654,8 @@ void big_integer::BigInteger::Normalize(std::vector<uint32_t>& limbs) noexcept {
     return value != 0;
   };
 
-  auto count_lead_zeros =
-      size_t(std::find_if(limbs.rbegin(), limbs.rend(), is_not_zero) - limbs.rbegin());
+  auto count_lead_zeros = size_t(
+      std::find_if(limbs.rbegin(), limbs.rend(), is_not_zero) - limbs.rbegin());
 
   limbs.erase(limbs.end() - (long)std::min(limbs.size() - 1U, count_lead_zeros),
               limbs.end());
