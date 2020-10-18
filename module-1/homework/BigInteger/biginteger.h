@@ -17,7 +17,7 @@ class BigInteger {
 
   BigInteger(int value);
 
-  BigInteger(const BigInteger& other);
+  BigInteger(const BigInteger& other) = default;
 
   BigInteger(BigInteger&& other) noexcept;
 
@@ -76,10 +76,20 @@ class BigInteger {
   ~BigInteger() = default;
 
  private:
+  /**
+   * I use uint32_t because I want to multiply numbers in uint64_t and
+   * handle carried bits with bitwise operations
+   */
+  using LimbType = uint32_t;
+  using ExtendedLimbType = uint64_t;
+
+  static constexpr size_t limb_type_size_ = sizeof(LimbType) * 8U;
+
   static uint32_t GetHighPart(uint64_t value) noexcept;
 
   static uint32_t GetLowPart(uint64_t value) noexcept;
 
+ private:
   enum CompareResult {
     LESS = -1,
     EQUAL = 0,
@@ -87,10 +97,10 @@ class BigInteger {
   };
 
   static CompareResult CompareAbsoluteValues(
-      const std::vector<uint32_t>& left, const std::vector<uint32_t>& right);
+      const std::vector<LimbType>& left, const std::vector<LimbType>& right);
 
-  static std::vector<uint32_t> SummarizeAbsoluteValues(
-      const std::vector<uint32_t>& left, const std::vector<uint32_t>& right);
+  static std::vector<LimbType> SummarizeAbsoluteValues(
+      const std::vector<LimbType>& left, const std::vector<LimbType>& right);
 
   static std::vector<uint32_t> SubtractAbsoluteValues(
       const std::vector<uint32_t>& left, const std::vector<uint32_t>& right);
@@ -145,11 +155,7 @@ class BigInteger {
  private:
   bool is_negative_{};
 
-  /**
-   * I use uint32_t because I want to multiply numbers in uint64_t and
-   * handle carried bits with bitwise operations
-   */
-  std::vector<uint32_t> limbs_;
+  std::vector<LimbType> limbs_;
 
   static constexpr size_t KARATSUBA_STOP_RECURSION_SIZE = 70;
 };

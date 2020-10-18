@@ -8,9 +8,11 @@
 #include <istream>
 #include <stdexcept>
 
-big_integer::BigInteger::BigInteger() : is_negative_(false), limbs_{0} {}
+namespace big_integer {
 
-big_integer::BigInteger::BigInteger(std::string_view string) {
+BigInteger::BigInteger() : is_negative_(false), limbs_{0} {}
+
+BigInteger::BigInteger(std::string_view string) {
   limbs_ = {0};
   is_negative_ = false;
 
@@ -35,179 +37,46 @@ big_integer::BigInteger::BigInteger(std::string_view string) {
   }
 }
 
-big_integer::BigInteger::BigInteger(int value)
-    : is_negative_(value < 0), limbs_({uint32_t(std::abs(value))}) {}
+BigInteger::BigInteger(int value)
+    : is_negative_(value < 0), limbs_({LimbType(std::abs(value))}) {}
 
-big_integer::BigInteger::BigInteger(const big_integer::BigInteger& other) =
-    default;
-
-big_integer::BigInteger::BigInteger(big_integer::BigInteger&& other) noexcept
+BigInteger::BigInteger(BigInteger&& other) noexcept
     : is_negative_(other.is_negative_), limbs_(std::move(other.limbs_)) {}
 
-big_integer::BigInteger big_integer::BigInteger::operator+(
-    const big_integer::BigInteger& other) const {
+BigInteger BigInteger::operator+(const BigInteger& other) const {
   BigInteger result(*this);
   result += other;
   return result;
 }
 
-uint32_t big_integer::BigInteger::GetHighPart(uint64_t value) noexcept {
-  return static_cast<uint32_t>(value >> (sizeof(uint32_t) * 8U));
+inline BigInteger::LimbType BigInteger::GetHighPart(
+    ExtendedLimbType value) noexcept {
+  return static_cast<LimbType>(value >> limb_type_size_);
 }
 
-uint32_t big_integer::BigInteger::GetLowPart(uint64_t value) noexcept {
-  return static_cast<uint32_t>(value & (~uint32_t(0)));
+inline BigInteger::LimbType BigInteger::GetLowPart(
+    ExtendedLimbType value) noexcept {
+  return static_cast<LimbType>(value & (~LimbType(0)));
 }
 
-big_integer::BigInteger big_integer::BigInteger::operator-(
-    const big_integer::BigInteger& other) const {
+BigInteger BigInteger::operator-(const BigInteger& other) const {
   auto result = *this;
   result -= other;
   return result;
 }
 
-big_integer::BigInteger::CompareResult
-big_integer::BigInteger::CompareAbsoluteValues(
-    const std::vector<uint32_t>& left, const std::vector<uint32_t>& right) {
-  if (left.size() < right.size()) {
-    return CompareResult::LESS;
-  } else if (left.size() > right.size()) {
-    return CompareResult::GREATER;
-  } else {
-    int pos = int(left.size() - 1U);
-    while (pos >= 0) {
-      auto index = size_t(pos);
-      if (left[index] < right[index]) {
-        return CompareResult::LESS;
-      } else if (left[index] > right[index]) {
-        return CompareResult::GREATER;
-      } else {
-        --pos;
-      }
-    }
-
-    return CompareResult::EQUAL;
-  }
-}
-
-std::vector<uint32_t> big_integer::BigInteger::SummarizeAbsoluteValues(
-    const std::vector<uint32_t>& left, const std::vector<uint32_t>& right) {
-  std::vector<uint32_t> result(std::max(left.size(), right.size()));
-
-  std::size_t pos = 0;
-  uint32_t carry = 0;
-  while (pos < result.size()) {
-    uint64_t limbs_sum;
-
-    if (pos < right.size()) {
-      limbs_sum = uint64_t(carry) + uint64_t(left[pos]) + uint64_t(right[pos]);
-    } else {
-      limbs_sum = uint64_t(left[pos]) + carry;
-    }
-
-    result[pos] = GetLowPart(limbs_sum);
-    carry = GetHighPart(limbs_sum);
-    pos++;
-  }
-
-  if (carry != 0) {
-    result.push_back(carry);
-  }
-
-  return result;
-}
-
-std::vector<uint32_t> big_integer::BigInteger::SubtractAbsoluteValues(
-    const std::vector<uint32_t>& left, const std::vector<uint32_t>& right) {
-  // It is private function. We assume that left > right.
-  std::vector<uint32_t> result(left.size(), 0);
-
-  size_t pos = 0;
-  uint64_t borrow = 0;
-  while (pos < right.size()) {
-    // Use uint64_t to calculate because uint32_t overflow occurs when
-    // (right[pos] == std::numeric_limits<uint32_t>::max() && borrow == 1)
-    if (uint64_t(left[pos]) >= uint64_t(right[pos]) + borrow) {
-      result[pos] = uint32_t(uint64_t(left[pos] - right[pos]) - borrow);
-      borrow = 0;
-    } else {
-      result[pos] = uint32_t(uint64_t(left[pos]) +
-                             (uint64_t(1) << (sizeof(uint32_t) * 8U)) -
-                             uint64_t(right[pos]) - borrow);
-      borrow = 1;
-    }
-    pos++;
-  }
-
-  while (pos < left.size() && borrow == 1) {
-    if (left[pos] >= borrow) {
-      result[pos] = uint32_t(left[pos] - borrow);
-      borrow = 0;
-    } else {
-      result[pos] = uint32_t(std::numeric_limits<uint32_t>::max() - borrow);
-      // here borrow still must be equal to 1
-    }
-    pos++;
-  }
-
-  while (pos < left.size()) {
-    result[pos] = left[pos];
-    ++pos;
-  }
-
-  Normalize(result);
-
-  if (result.empty()) {
-    throw std::runtime_error("Unexpected empty result of subtraction");
-  }
-
-  return result;
-}
-
-void big_integer::BigInteger::IncrementAbsoluteValue(
-    std::vector<uint32_t>& limbs) {
-  uint64_t carry = 1;
-  size_t pos = 0;
-  while ((carry != 0) && (pos < limbs.size())) {
-    auto limbs_sum = carry + uint64_t(limbs[pos]);
-    limbs[pos] = GetLowPart(limbs_sum);
-    carry = GetHighPart(limbs_sum);
-    pos++;
-  }
-
-  if (carry) {
-    limbs.push_back(carry);
-  }
-}
-
-void big_integer::BigInteger::DecrementAbsoluteValue(
-    std::vector<uint32_t>& limbs) {
-  // It is private function and it is assumed that limbs.size() > 1
-  for (uint32_t& limb : limbs) {
-    if (limb == 0) {
-      limb = std::numeric_limits<uint32_t>::max();
-    } else {
-      limb--;
-      break;
-    }
-  }
-
-  Normalize(limbs);
-}
-
-big_integer::BigInteger big_integer::BigInteger::operator-() const {
+BigInteger BigInteger::operator-() const {
   if (IsZeroed()) {
     return *this;
   }
-  return big_integer::BigInteger(!is_negative_, limbs_);
+  return BigInteger(!is_negative_, limbs_);
 }
 
-big_integer::BigInteger big_integer::BigInteger::operator+() const {
+BigInteger BigInteger::operator+() const {
   return *this;
 }
 
-big_integer::BigInteger& big_integer::BigInteger::operator+=(
-    const big_integer::BigInteger& other) {
+BigInteger& BigInteger::operator+=(const BigInteger& other) {
   if (is_negative_ == other.is_negative_) {
     limbs_ = SummarizeAbsoluteValues(limbs_, other.limbs_);
 
@@ -229,8 +98,7 @@ big_integer::BigInteger& big_integer::BigInteger::operator+=(
   return *this;
 }
 
-big_integer::BigInteger& big_integer::BigInteger::operator-=(
-    const big_integer::BigInteger& other) {
+BigInteger& BigInteger::operator-=(const BigInteger& other) {
   if (is_negative_ != other.is_negative_) {
     limbs_ = SummarizeAbsoluteValues(limbs_, other.limbs_);
 
@@ -255,8 +123,7 @@ big_integer::BigInteger& big_integer::BigInteger::operator-=(
   return *this;
 }
 
-big_integer::BigInteger& big_integer::BigInteger::operator*=(
-    const big_integer::BigInteger& other) {
+BigInteger& BigInteger::operator*=(const BigInteger& other) {
   if (this->IsZeroed() || other.IsZeroed()) {
     is_negative_ = false;
     limbs_ = {0};
@@ -269,8 +136,7 @@ big_integer::BigInteger& big_integer::BigInteger::operator*=(
   return *this;
 }
 
-big_integer::BigInteger& big_integer::BigInteger::operator/=(
-    const big_integer::BigInteger& other) {
+BigInteger& BigInteger::operator/=(const BigInteger& other) {
   if (other.IsZeroed()) {
     throw std::logic_error("Division by zero");
   }
@@ -285,8 +151,7 @@ big_integer::BigInteger& big_integer::BigInteger::operator/=(
   return *this;
 }
 
-big_integer::BigInteger& big_integer::BigInteger::operator%=(
-    const big_integer::BigInteger& other) {
+BigInteger& BigInteger::operator%=(const BigInteger& other) {
   if (other.IsZeroed()) {
     throw std::logic_error("Division by zero");
   }
@@ -300,8 +165,7 @@ big_integer::BigInteger& big_integer::BigInteger::operator%=(
   return *this;
 }
 
-bool big_integer::BigInteger::operator<(
-    const big_integer::BigInteger& other) const noexcept {
+bool BigInteger::operator<(const BigInteger& other) const noexcept {
   auto compare_result = CompareAbsoluteValues(this->limbs_, other.limbs_);
 
   if (this->is_negative_ && other.is_negative_) {
@@ -315,8 +179,7 @@ bool big_integer::BigInteger::operator<(
   }
 }
 
-bool big_integer::BigInteger::operator<=(
-    const big_integer::BigInteger& other) const noexcept {
+bool BigInteger::operator<=(const BigInteger& other) const noexcept {
   auto compare_result = CompareAbsoluteValues(this->limbs_, other.limbs_);
 
   if (this->is_negative_ && other.is_negative_) {
@@ -335,52 +198,48 @@ bool big_integer::BigInteger::operator<=(
   }
 }
 
-bool big_integer::BigInteger::operator>(
-    const big_integer::BigInteger& other) const noexcept {
+bool BigInteger::operator>(const BigInteger& other) const noexcept {
   // Careful here
   // l > r is the same as r < l
   return other < *this;
 }
 
-bool big_integer::BigInteger::operator>=(
-    const big_integer::BigInteger& other) const noexcept {
+bool BigInteger::operator>=(const BigInteger& other) const noexcept {
   // Careful here
   // l >= r is the same as !(l < r)
   return !(*this < other);
 }
 
-bool big_integer::BigInteger::operator==(
-    const big_integer::BigInteger& other) const noexcept {
+bool BigInteger::operator==(const BigInteger& other) const noexcept {
   if (is_negative_ != other.is_negative_) {
     return false;
   }
   return limbs_ == other.limbs_;
 }
 
-bool big_integer::BigInteger::operator!=(
-    const big_integer::BigInteger& other) const noexcept {
+bool BigInteger::operator!=(const BigInteger& other) const noexcept {
   // Careful here
   // l != r is the same as !(l == r)
   return !(*this == other);
 }
 
-big_integer::BigInteger::operator bool() const noexcept {
+BigInteger::operator bool() const noexcept {
   return !IsZeroed();
 }
 
-big_integer::BigInteger big_integer::BigInteger::operator--(int) {
+BigInteger BigInteger::operator--(int) {
   auto result = *this;
   --*this;
   return result;
 }
 
-big_integer::BigInteger big_integer::BigInteger::operator++(int) {
+BigInteger BigInteger::operator++(int) {
   auto result = *this;
   ++*this;
   return result;
 }
 
-big_integer::BigInteger& big_integer::BigInteger::operator++() {
+BigInteger& BigInteger::operator++() {
   if (is_negative_) {
     DecrementAbsoluteValue(limbs_);
     if (IsZeroed()) {
@@ -392,7 +251,7 @@ big_integer::BigInteger& big_integer::BigInteger::operator++() {
   return *this;
 }
 
-big_integer::BigInteger& big_integer::BigInteger::operator--() {
+BigInteger& BigInteger::operator--() {
   if (IsZeroed()) {
     is_negative_ = true;
     IncrementAbsoluteValue(limbs_);
@@ -404,154 +263,30 @@ big_integer::BigInteger& big_integer::BigInteger::operator--() {
   return *this;
 }
 
-std::vector<uint32_t> big_integer::BigInteger::MultiplyAbsoluteValues(
-    const std::vector<uint32_t>& left, const std::vector<uint32_t>& right) {
-  return MultiplyAbsoluteValuesWithKaratsubaAlgo(left, right);
-}
-
-std::vector<uint32_t>
-big_integer::BigInteger::MultiplyAbsoluteValuesWithKaratsubaAlgo(
-    const std::vector<uint32_t>& left, const std::vector<uint32_t>& right) {
-  if (left.size() < KARATSUBA_STOP_RECURSION_SIZE) {
-    return MultiplyAbsoluteValuesNaive(right, left);
-
-  } else if (right.size() < KARATSUBA_STOP_RECURSION_SIZE) {
-    return MultiplyAbsoluteValuesNaive(left, right);
-  } else {
-    auto half_size = std::min(std::min(left.size(), right.size()),
-                              std::max(left.size() / 2, right.size() / 2));
-
-    std::vector a(left.begin() + half_size, left.end());
-    std::vector b(left.begin(), left.begin() + half_size);
-    std::vector c(right.begin() + half_size, right.end());
-    std::vector d(right.begin(), right.begin() + half_size);
-
-    auto mul_ac = MultiplyAbsoluteValuesWithKaratsubaAlgo(a, c);
-    auto mul_bd = MultiplyAbsoluteValuesWithKaratsubaAlgo(b, d);
-    auto sum_ab = SummarizeAbsoluteValues(a, b);
-    auto sum_cd = SummarizeAbsoluteValues(c, d);
-
-    auto mul_sum_ab_sum_cd =
-        MultiplyAbsoluteValuesWithKaratsubaAlgo(sum_ab, sum_cd);
-    auto center = SubtractAbsoluteValues(
-        mul_sum_ab_sum_cd, SummarizeAbsoluteValues(mul_ac, mul_bd));
-
-    // I am trying to avoid unnecessary copying and memory allocations,
-    // so I can use mul_bd instance to store result
-    // mul_bd is part of the final answer, so I need to add remaining values
-    auto& result = mul_bd;
-
-    ShiftLimbsLeft(center, half_size);
-    ShiftLimbsLeft(mul_ac, half_size * 2);
-
-    result = SummarizeAbsoluteValues(result,
-                                     SummarizeAbsoluteValues(mul_ac, center));
-    return result;
-  }
-}
-
-std::vector<uint32_t> big_integer::BigInteger::MultiplyAbsoluteValuesNaive(
-    const std::vector<uint32_t>& shorter, const std::vector<uint32_t>& longer) {
-  std::vector<uint32_t> result(shorter.size() + longer.size(), 0);
-
-  for (size_t short_pos = 0; short_pos < shorter.size(); ++short_pos) {
-    uint64_t carry = 0;
-
-    for (size_t long_pos = 0; long_pos < longer.size(); ++long_pos) {
-      uint64_t value =
-          carry + uint64_t(shorter[short_pos]) * uint64_t(longer[long_pos]) +
-          uint64_t(result[long_pos + short_pos]);
-      result[long_pos + short_pos] = GetLowPart(value);
-      carry = GetHighPart(value);
-    }
-
-    if (carry) {
-      result[short_pos + longer.size()] = uint32_t(carry);
-    }
-  }
-
-  Normalize(result);
-  return result;
-}
-
-std::pair<std::vector<uint32_t>, uint32_t>
-big_integer::BigInteger::DivideAbsoluteValueByLimb(
-    const std::vector<uint32_t>& left, uint32_t right) {
-  std::vector<uint32_t> result;
-  result.resize(left.size());
-
-  uint64_t carry = 0;
-  int pos = int(left.size()) - 1;
-  while (pos >= 0) {
-    uint64_t cur = left[pos] + (uint64_t(carry) << (sizeof(uint32_t) * 8U));
-    result[pos] = cur / right;
-    carry = cur % right;
-    pos--;
-  }
-
-  Normalize(result);
-  return std::make_pair(result, carry);
-}
-
-std::pair<std::vector<uint32_t>, std::vector<uint32_t>>
-big_integer::BigInteger::DivideAbsoluteValues(
-    const std::vector<uint32_t>& left, const std::vector<uint32_t>& right) {
-  if (CompareAbsoluteValues(left, right) == CompareResult::LESS) {
-    return {{0}, left};
-  }
-
-  std::vector<uint32_t> dividend = left;
-  std::vector<uint32_t> result = {0U};
-  std::vector<uint32_t> current_value = right;
-
-  {
-    auto left_msb_position = GetMostSignificantBitPosition(left);
-    auto right_msb_position = GetMostSignificantBitPosition(right);
-    ShiftBitsLeft(current_value, left_msb_position - right_msb_position);
-  }
-
-  while (CompareAbsoluteValues(current_value, right) != LESS) {
-    ShiftBitsLeft(result, 1);
-
-    if (CompareAbsoluteValues(dividend, current_value) != CompareResult::LESS) {
-      // set least bit
-      result[0] |= 1U;
-      dividend = SubtractAbsoluteValues(dividend, current_value);
-    }
-
-    ShiftBitsRight(current_value, 1);
-  }
-  return {result, dividend};
-}
-
-big_integer::BigInteger::BigInteger(bool is_negative,
-                                    std::vector<uint32_t> limbs)
+BigInteger::BigInteger(bool is_negative, std::vector<LimbType> limbs)
     : is_negative_(is_negative), limbs_(std::move(limbs)) {
   if (IsZeroed()) is_negative_ = false;
 }
 
-big_integer::BigInteger big_integer::BigInteger::operator*(
-    const big_integer::BigInteger& other) const {
+BigInteger BigInteger::operator*(const BigInteger& other) const {
   auto result = *this;
   result *= other;
   return result;
 }
 
-big_integer::BigInteger big_integer::BigInteger::operator/(
-    const big_integer::BigInteger& other) const {
+BigInteger BigInteger::operator/(const BigInteger& other) const {
   auto result = *this;
   result /= other;
   return result;
 }
 
-big_integer::BigInteger big_integer::BigInteger::operator%(
-    const big_integer::BigInteger& other) const {
+BigInteger BigInteger::operator%(const BigInteger& other) const {
   auto result = *this;
   result %= other;
   return result;
 }
 
-std::string big_integer::BigInteger::toString() const {
+std::string BigInteger::toString() const {
   if (IsZeroed()) {
     return "0";
   }
@@ -561,7 +296,7 @@ std::string big_integer::BigInteger::toString() const {
     result += '-';
   }
 
-  std::vector<uint32_t> limbs = limbs_;
+  std::vector<LimbType> limbs = limbs_;
   for (;;) {
     // fixme: use IsZeroed() method
     if ((limbs.size() == 1U) && (limbs[0] == 0)) {
@@ -582,114 +317,18 @@ std::string big_integer::BigInteger::toString() const {
   return result;
 }
 
-void big_integer::BigInteger::ShiftLimbsLeft(std::vector<uint32_t>& limbs,
-                                             size_t count) {
-  limbs.insert(limbs.begin(), count, 0);
-}
-
-void big_integer::BigInteger::ShiftLimbsRight(std::vector<uint32_t>& limbs,
-                                              long count) {
-  count = std::min(count, long(limbs.size()));
-  limbs.erase(limbs.begin(), limbs.begin() + count);
-}
-
-void big_integer::BigInteger::ShiftBitsLeft(std::vector<uint32_t>& limbs,
-                                            size_t count) {
-  if (count == 0) {
-    return;
-  }
-  auto limbs_count = count / (sizeof(uint32_t) * 8U);
-  ShiftLimbsLeft(limbs, limbs_count);
-
-  count %= sizeof(uint32_t) * 8U;
-  uint32_t carry = 0;
-  for (uint32_t& limb_value : limbs) {
-    uint64_t new_limb_value = (uint64_t(limb_value) << count) + carry;
-    limb_value = GetLowPart(new_limb_value);
-    carry = GetHighPart(new_limb_value);
-  }
-
-  if (carry != 0) {
-    limbs.push_back(carry);
-  }
-}
-
-void big_integer::BigInteger::ShiftBitsRight(std::vector<uint32_t>& limbs,
-                                             long count) {
-  if (count == 0) {
-    return;
-  }
-  auto limbs_count = count / long(sizeof(uint32_t) * 8U);
-  ShiftLimbsRight(limbs, limbs_count);
-
-  count %= sizeof(uint32_t) * 8U;
-  uint32_t borrow = 0;
-  for (auto i = long(limbs.size()) - 1; i >= 0; --i) {
-    uint32_t new_limb_value = (limbs[size_t(i)] >> size_t(count)) | borrow;
-    borrow = (GetLeastBitsMask(size_t(count)) & limbs[size_t(i)])
-             << (sizeof(uint32_t) * 8U - size_t(count));
-    limbs[size_t(i)] = new_limb_value;
-  }
-
-  Normalize(limbs);
-}
-
-constexpr uint32_t big_integer::BigInteger::GetLeastBitsMask(
-    size_t bits_count) {
-  uint32_t result = 0;
-  for (size_t i = 0; i < bits_count; ++i) {
-    result |= (uint32_t(1) << i);
-  }
-
-  return result;
-}
-
-void big_integer::BigInteger::Normalize(std::vector<uint32_t>& limbs) noexcept {
-  if (limbs.empty()) {
-    limbs = {0};
-    return;
-  }
-
-  auto is_not_zero = [](uint32_t value) {
-    return value != 0;
-  };
-
-  auto count_lead_zeros = size_t(
-      std::find_if(limbs.rbegin(), limbs.rend(), is_not_zero) - limbs.rbegin());
-
-  limbs.erase(limbs.end() - (long)std::min(limbs.size() - 1U, count_lead_zeros),
-              limbs.end());
-}
-
-size_t big_integer::BigInteger::GetMostSignificantBitPosition(
-    uint32_t value) noexcept {
-  if (!value) {
-    return ~size_t(0);
-  }
-
-  size_t pos = 0;
-  while (value) {
-    value >>= 1U;
-    pos++;
-  }
-
-  return pos - 1;
-}
-
-size_t big_integer::BigInteger::GetMostSignificantBitPosition(
-    const std::vector<uint32_t>& value) noexcept {
+size_t BigInteger::GetMostSignificantBitPosition(
+    const std::vector<LimbType>& value) noexcept {
   return GetMostSignificantBitPosition(value.back()) +
-         (value.size() - 1) * sizeof(uint32_t) * 8U;
+         (value.size() - 1) * limb_type_size_;
 }
 
-std::ostream& big_integer::operator<<(std::ostream& out,
-                                      const big_integer::BigInteger& value) {
+std::ostream& operator<<(std::ostream& out, const BigInteger& value) {
   out << value.toString();
   return out;
 }
 
-std::istream& big_integer::operator>>(std::istream& in,
-                                      big_integer::BigInteger& value) {
+std::istream& operator>>(std::istream& in, BigInteger& value) {
   char c;
   bool first = true;
   bool is_negative = false;
@@ -718,6 +357,371 @@ std::istream& big_integer::operator>>(std::istream& in,
   return in;
 }
 
-bool big_integer::BigInteger::IsZeroed() const {
+bool BigInteger::IsZeroed() const {
   return (limbs_.size() == 1) && (limbs_[0] == 0);
 }
+
+/*************************************************************************
+ * From here low-level math starts
+ *
+ * This file implements unsigned math with numbers
+ * represented as sequence of limbs
+ */
+
+BigInteger::CompareResult BigInteger::CompareAbsoluteValues(
+    const std::vector<LimbType>& left, const std::vector<LimbType>& right) {
+  if (left.size() < right.size()) {
+    return CompareResult::LESS;
+  }
+
+  if (left.size() > right.size()) {
+    return CompareResult::GREATER;
+  }
+
+  // pos could be equal to -1 => counter with sign bit required
+  auto pos = long(left.size() - 1U);
+  while (pos >= 0) {
+    auto index = size_t(pos);
+
+    if (left[index] < right[index]) {
+      return CompareResult::LESS;
+    }
+
+    if (left[index] > right[index]) {
+      return CompareResult::GREATER;
+    }
+
+    --pos;
+  }
+
+  return CompareResult::EQUAL;
+}
+
+std::vector<BigInteger::LimbType> BigInteger::SummarizeAbsoluteValues(
+    const std::vector<LimbType>& left, const std::vector<LimbType>& right) {
+  std::vector<LimbType> result(std::max(left.size(), right.size()));
+
+  std::size_t pos = 0;
+  LimbType carry = 0;
+  while (pos < result.size()) {
+    ExtendedLimbType limbs_sum;
+
+    if (pos < right.size()) {
+      limbs_sum = ExtendedLimbType(carry) + ExtendedLimbType(left[pos]) +
+                  ExtendedLimbType(right[pos]);
+    } else {
+      limbs_sum = ExtendedLimbType(left[pos]) + carry;
+    }
+
+    result[pos] = GetLowPart(limbs_sum);
+    carry = GetHighPart(limbs_sum);
+    pos++;
+  }
+
+  if (carry != 0) {
+    result.push_back(carry);
+  }
+
+  return result;
+}
+
+std::vector<BigInteger::LimbType> BigInteger::SubtractAbsoluteValues(
+    const std::vector<LimbType>& left, const std::vector<LimbType>& right) {
+  // It is private function. We assume that left > right.
+  std::vector<LimbType> result(left.size(), 0);
+
+  size_t pos = 0;
+  ExtendedLimbType borrow = 0;
+  while (pos < right.size()) {
+    // Use ExtendedLimbType to calculate because LimbType overflow occurs when
+    // (right[pos] == std::numeric_limits<LimbType>::max() && borrow == 1)
+    if (ExtendedLimbType(left[pos]) >= ExtendedLimbType(right[pos]) + borrow) {
+      result[pos] = LimbType(ExtendedLimbType(left[pos] - right[pos]) - borrow);
+      borrow = 0;
+    } else {
+      ExtendedLimbType tmp = left[pos];
+      tmp += (ExtendedLimbType(1) << limb_type_size_);
+      tmp -= ExtendedLimbType(right[pos]);
+      tmp += borrow;
+
+      result[pos] = LimbType(tmp);
+      borrow = 1;
+    }
+    pos++;
+  }
+
+  while (pos < left.size() && borrow == 1) {
+    if (left[pos] >= borrow) {
+      result[pos] = LimbType(left[pos] - borrow);
+      borrow = 0;
+    } else {
+      result[pos] = LimbType(std::numeric_limits<LimbType>::max() - borrow);
+      // here borrow still must be equal to 1
+    }
+    pos++;
+  }
+
+  while (pos < left.size()) {
+    result[pos] = left[pos];
+    ++pos;
+  }
+
+  Normalize(result);
+
+  if (result.empty()) {
+    throw std::runtime_error("Unexpected empty result of subtraction");
+  }
+
+  return result;
+}
+
+void BigInteger::IncrementAbsoluteValue(std::vector<LimbType>& limbs) {
+  ExtendedLimbType carry = 1;
+  size_t pos = 0;
+  while ((carry != 0) && (pos < limbs.size())) {
+    auto limbs_sum = carry + ExtendedLimbType(limbs[pos]);
+    limbs[pos] = GetLowPart(limbs_sum);
+    carry = GetHighPart(limbs_sum);
+    pos++;
+  }
+
+  if (carry) {
+    limbs.push_back(LimbType(carry));
+  }
+}
+
+void BigInteger::DecrementAbsoluteValue(std::vector<LimbType>& limbs) {
+  // It is private function and it is assumed that limbs.size() > 1
+  for (LimbType& limb : limbs) {
+    if (limb == 0) {
+      limb = std::numeric_limits<LimbType>::max();
+    } else {
+      limb--;
+      break;
+    }
+  }
+
+  Normalize(limbs);
+}
+
+std::vector<BigInteger::LimbType> BigInteger::MultiplyAbsoluteValues(
+    const std::vector<LimbType>& left, const std::vector<LimbType>& right) {
+  return MultiplyAbsoluteValuesWithKaratsubaAlgo(left, right);
+}
+
+std::vector<BigInteger::LimbType>
+BigInteger::MultiplyAbsoluteValuesWithKaratsubaAlgo(
+    const std::vector<LimbType>& left, const std::vector<LimbType>& right) {
+  if (left.size() < KARATSUBA_STOP_RECURSION_SIZE) {
+    return MultiplyAbsoluteValuesNaive(right, left);
+
+  } else if (right.size() < KARATSUBA_STOP_RECURSION_SIZE) {
+    return MultiplyAbsoluteValuesNaive(left, right);
+  } else {
+    auto max_half_size = std::max(left.size() / 2, right.size() / 2);
+    auto half_size = std::min(left.size(), right.size());
+    half_size = std::min(half_size, max_half_size);
+
+    std::vector a(left.begin() + long(half_size), left.end());
+    std::vector b(left.begin(), left.begin() + long(half_size));
+    std::vector c(right.begin() + long(half_size), right.end());
+    std::vector d(right.begin(), right.begin() + long(half_size));
+
+    auto mul_ac = MultiplyAbsoluteValuesWithKaratsubaAlgo(a, c);
+    auto mul_bd = MultiplyAbsoluteValuesWithKaratsubaAlgo(b, d);
+    auto sum_ab = SummarizeAbsoluteValues(a, b);
+    auto sum_cd = SummarizeAbsoluteValues(c, d);
+
+    auto mul_sum_ab_sum_cd =
+        MultiplyAbsoluteValuesWithKaratsubaAlgo(sum_ab, sum_cd);
+    auto center = SubtractAbsoluteValues(
+        mul_sum_ab_sum_cd, SummarizeAbsoluteValues(mul_ac, mul_bd));
+
+    // I am trying to avoid unnecessary copying and memory allocations,
+    // so I can use mul_bd instance to store result
+    // mul_bd is part of the final answer, so I need to add remaining values
+    auto& result = mul_bd;
+
+    ShiftLimbsLeft(center, half_size);
+    ShiftLimbsLeft(mul_ac, half_size * 2);
+
+    result = SummarizeAbsoluteValues(result,
+                                     SummarizeAbsoluteValues(mul_ac, center));
+    return result;
+  }
+}
+
+std::vector<BigInteger::LimbType> BigInteger::MultiplyAbsoluteValuesNaive(
+    const std::vector<LimbType>& shorter, const std::vector<LimbType>& longer) {
+  std::vector<LimbType> result(shorter.size() + longer.size(), 0);
+
+  // todo: check if there is a bug.
+  // It is strange that there are no LimbType overflow checks
+  // in the whole function
+
+  for (size_t short_pos = 0; short_pos < shorter.size(); ++short_pos) {
+    ExtendedLimbType carry = 0;
+
+    for (size_t long_pos = 0; long_pos < longer.size(); ++long_pos) {
+      ExtendedLimbType tmp = carry;
+      tmp += ExtendedLimbType(shorter[short_pos]) *
+             ExtendedLimbType(longer[long_pos]);
+      tmp += ExtendedLimbType(result[long_pos + short_pos]);
+
+      result[long_pos + short_pos] = GetLowPart(tmp);
+      carry = GetHighPart(tmp);
+    }
+
+    if (carry) {
+      result[short_pos + longer.size()] = LimbType(carry);
+    }
+  }
+
+  Normalize(result);
+  return result;
+}
+
+std::pair<std::vector<BigInteger::LimbType>, BigInteger::LimbType>
+BigInteger::DivideAbsoluteValueByLimb(const std::vector<LimbType>& left,
+                                      LimbType right) {
+  std::vector<LimbType> result;
+  result.resize(left.size());
+
+  ExtendedLimbType carry = 0;
+  auto pos = left.size() - 1;
+
+  // when pos = -1 it's actual value is ~size_t(0)
+  while (pos < left.size()) {
+    ExtendedLimbType cur =
+        left[pos] + (ExtendedLimbType(carry) << limb_type_size_);
+    result[pos] = GetLowPart(cur / ExtendedLimbType(right));
+
+    carry = cur % right;
+    pos--;
+  }
+
+  Normalize(result);
+  return {result, carry};
+}
+
+std::pair<std::vector<BigInteger::LimbType>, std::vector<BigInteger::LimbType>>
+BigInteger::DivideAbsoluteValues(const std::vector<LimbType>& left,
+                                 const std::vector<LimbType>& right) {
+  if (CompareAbsoluteValues(left, right) == CompareResult::LESS) {
+    return {{0}, left};
+  }
+
+  std::vector<LimbType> dividend = left;
+  std::vector<LimbType> result = {0U};
+  std::vector<LimbType> current_value = right;
+
+  {
+    auto left_msb_position = GetMostSignificantBitPosition(left);
+    auto right_msb_position = GetMostSignificantBitPosition(right);
+    ShiftBitsLeft(current_value, left_msb_position - right_msb_position);
+  }
+
+  while (CompareAbsoluteValues(current_value, right) != LESS) {
+    ShiftBitsLeft(result, 1);
+
+    if (CompareAbsoluteValues(dividend, current_value) != CompareResult::LESS) {
+      // set least bit
+      result[0] |= 1U;
+      dividend = SubtractAbsoluteValues(dividend, current_value);
+    }
+
+    ShiftBitsRight(current_value, 1);
+  }
+  return {result, dividend};
+}
+
+void BigInteger::ShiftLimbsLeft(std::vector<LimbType>& limbs, size_t count) {
+  limbs.insert(limbs.begin(), count, 0);
+}
+
+void BigInteger::ShiftLimbsRight(std::vector<LimbType>& limbs, long count) {
+  count = std::min(count, long(limbs.size()));
+  limbs.erase(limbs.begin(), limbs.begin() + count);
+}
+
+void BigInteger::ShiftBitsLeft(std::vector<LimbType>& limbs, size_t count) {
+  if (count == 0) {
+    return;
+  }
+  auto limbs_count = count / limb_type_size_;
+  ShiftLimbsLeft(limbs, limbs_count);
+
+  count %= limb_type_size_;
+  LimbType carry = 0;
+  for (LimbType& limb_value : limbs) {
+    ExtendedLimbType new_limb_value =
+        (ExtendedLimbType(limb_value) << count) + carry;
+    limb_value = GetLowPart(new_limb_value);
+    carry = GetHighPart(new_limb_value);
+  }
+
+  if (carry != 0) {
+    limbs.push_back(carry);
+  }
+}
+
+void BigInteger::ShiftBitsRight(std::vector<LimbType>& limbs, long count) {
+  if (count == 0) {
+    return;
+  }
+  auto limbs_count = count / long(limb_type_size_);
+  ShiftLimbsRight(limbs, limbs_count);
+
+  count %= limb_type_size_;
+  LimbType borrow = 0;
+  for (auto i = long(limbs.size()) - 1; i >= 0; --i) {
+    LimbType new_limb_value = (limbs[size_t(i)] >> size_t(count)) | borrow;
+    borrow = (GetLeastBitsMask(size_t(count)) & limbs[size_t(i)])
+             << (limb_type_size_ - size_t(count));
+    limbs[size_t(i)] = new_limb_value;
+  }
+
+  Normalize(limbs);
+}
+
+constexpr BigInteger::LimbType BigInteger::GetLeastBitsMask(size_t bits_count) {
+  LimbType result = 0;
+  for (size_t i = 0; i < bits_count; ++i) {
+    result |= (LimbType(1) << i);
+  }
+
+  return result;
+}
+
+void BigInteger::Normalize(std::vector<LimbType>& limbs) noexcept {
+  if (limbs.empty()) {
+    limbs = {0};
+    return;
+  }
+
+  auto is_not_zero = [](LimbType value) {
+    return value != 0;
+  };
+
+  auto count_lead_zeros = size_t(
+      std::find_if(limbs.rbegin(), limbs.rend(), is_not_zero) - limbs.rbegin());
+
+  limbs.erase(limbs.end() - (long)std::min(limbs.size() - 1U, count_lead_zeros),
+              limbs.end());
+}
+
+size_t BigInteger::GetMostSignificantBitPosition(LimbType value) noexcept {
+  if (!value) {
+    return ~size_t(0);
+  }
+
+  size_t pos = 0;
+  while (value) {
+    value >>= 1U;
+    pos++;
+  }
+
+  return pos - 1;
+}
+
+}  // namespace big_integer
