@@ -1,3 +1,4 @@
+#pragma once
 
 #include "ellipse.h"
 #include "point.h"

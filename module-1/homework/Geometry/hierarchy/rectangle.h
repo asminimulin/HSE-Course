@@ -6,6 +6,9 @@
 
 class Rectangle: public Polygon {
 public:
+
+  Rectangle() = default;
+
   Rectangle(const Point&A, const Point&B, double tangent);
 
   Point center() const noexcept;

@@ -292,7 +292,17 @@ TEST(Circle, All) {
   ASSERT_TRUE(circle.containsPoint({10, 15}));
 }
 
+TEST(Square, All) {
+  Square square({10, 20}, {25, 5});
 
+  auto circumscribed_circle = square.circumscribedCircle();
+  ASSERT_TRUE(circumscribed_circle.center() == Point(17.5, 12.5));
+  ASSERT_TRUE(common::eq(circumscribed_circle.radius(), 7.5 * std::sqrt(2)));
+
+  auto inscribed_circle = square.inscribedCircle();
+  ASSERT_TRUE(inscribed_circle.center() == Point(17.5, 12.5));
+  ASSERT_TRUE(common::eq(inscribed_circle.radius(), 7.5));
+}
 
 int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
