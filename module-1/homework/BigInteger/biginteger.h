@@ -108,46 +108,49 @@ class BigInteger {
   static void SubtractAbsoluteValuesInplace(std::vector<LimbType>& left,
                                             const std::vector<LimbType>& right);
 
-  static std::vector<uint32_t> SubtractAbsoluteValues(
-      const std::vector<uint32_t>& left, const std::vector<uint32_t>& right);
+  static std::vector<LimbType> SubtractAbsoluteValues(
+      const std::vector<LimbType>& left, const std::vector<LimbType>& right);
 
-  static void IncrementAbsoluteValue(std::vector<uint32_t>& limbs);
+  static void IncrementAbsoluteValue(std::vector<LimbType>& limbs);
 
-  static void DecrementAbsoluteValue(std::vector<uint32_t>& limbs);
+  static void DecrementAbsoluteValue(std::vector<LimbType>& limbs);
 
-  static std::vector<uint32_t> MultiplyAbsoluteValues(
-      const std::vector<uint32_t>& left, const std::vector<uint32_t>& right);
+  static std::vector<LimbType> MultiplyAbsoluteValues(
+      const std::vector<LimbType>& left, const std::vector<LimbType>& right);
 
-  static std::vector<uint32_t> MultiplyAbsoluteValuesWithKaratsubaAlgo(
-      const std::vector<uint32_t>& left, const std::vector<uint32_t>& right);
+  static std::vector<LimbType> MultiplyAbsoluteValuesWithKaratsubaAlgo(
+      const std::vector<LimbType>& left, const std::vector<LimbType>& right);
 
-  static std::vector<uint32_t> MultiplyAbsoluteValuesNaive(
-      const std::vector<uint32_t>& shorter,
-      const std::vector<uint32_t>& longer);
+  static std::vector<LimbType> MultiplyAbsoluteValuesNaive(
+      const std::vector<LimbType>& shorter,
+      const std::vector<LimbType>& longer);
 
-  static std::pair<std::vector<uint32_t>, std::vector<uint32_t>>
-  DivideAbsoluteValues(const std::vector<uint32_t>& left,
-                       const std::vector<uint32_t>& right);
+  static void MultiplyAbsoluteValueByLimbInplace(std::vector<LimbType>& limbs,
+                                                 LimbType value);
 
-  static std::pair<std::vector<uint32_t>, uint32_t> DivideAbsoluteValueByLimb(
-      const std::vector<uint32_t>& left, uint32_t limb);
+  static std::pair<std::vector<LimbType>, std::vector<LimbType>>
+  DivideAbsoluteValues(const std::vector<LimbType>& left,
+                       const std::vector<LimbType>& right);
 
-  static void ShiftLimbsLeft(std::vector<uint32_t>& limbs, size_t count);
+  static std::pair<std::vector<LimbType>, LimbType> DivideAbsoluteValueByLimb(
+      const std::vector<LimbType>& left, LimbType limb);
 
-  static void ShiftLimbsRight(std::vector<uint32_t>& limbs, long count);
+  static void ShiftLimbsLeft(std::vector<LimbType>& limbs, size_t count);
 
-  static void ShiftBitsLeft(std::vector<uint32_t>& limbs, size_t count);
+  static void ShiftLimbsRight(std::vector<LimbType>& limbs, long count);
 
-  static void ShiftBitsRight(std::vector<uint32_t>& limbs, long count);
+  static void ShiftBitsLeft(std::vector<LimbType>& limbs, size_t count);
+
+  static void ShiftBitsRight(std::vector<LimbType>& limbs, long count);
 
   static constexpr uint32_t GetLeastBitsMask(size_t bits_count);
 
   static void Normalize(std::vector<uint32_t>& limbs) noexcept;
 
-  static size_t GetMostSignificantBitPosition(uint32_t value) noexcept;
+  static size_t GetMostSignificantBitPosition(LimbType value) noexcept;
 
   static size_t GetMostSignificantBitPosition(
-      const std::vector<uint32_t>& value) noexcept;
+      const std::vector<LimbType>& value) noexcept;
 
   /**
    * This constructor should be used from internal arithmetic functions
@@ -155,8 +158,11 @@ class BigInteger {
    * @param is_negative is the number negative
    * @param limbs the limbs of the number
    */
-  BigInteger(bool is_negative, std::vector<uint32_t> limbs);
+  BigInteger(bool is_negative, std::vector<LimbType> limbs);
+
   [[nodiscard]] bool IsZeroed() const;
+
+  [[nodiscard]] static bool IsZeroed(const std::vector<LimbType>& limbs);
 
  private:
   bool is_negative_{};

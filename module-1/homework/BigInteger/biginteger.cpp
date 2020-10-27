@@ -32,13 +32,13 @@ BigInteger::BigInteger(std::string_view string) {
       throw std::runtime_error(
           "Cannot construct BigInteger from provided string");
     }
-    // fixme: do it inplace
-    *this = *this * 10 + (string[pos] - '0');
+    MultiplyAbsoluteValueByLimbInplace(this->limbs_, 10);
+    SummarizeAbsoluteValuesInplace(this->limbs_, {LimbType(string[pos] - '0')});
   }
 }
 
 BigInteger::BigInteger(int value)
-    : is_negative_(value < 0), limbs_({LimbType(std::abs(value))}) {}
+    : is_negative_(value < 0), limbs_{LimbType(std::abs(value))} {}
 
 BigInteger::BigInteger(BigInteger&& other) noexcept
     : is_negative_(other.is_negative_), limbs_(std::move(other.limbs_)) {}
@@ -81,6 +81,7 @@ BigInteger& BigInteger::operator+=(const BigInteger& other) {
     SummarizeAbsoluteValuesInplace(limbs_, other.limbs_);
   } else {
     auto compare_result = CompareAbsoluteValues(limbs_, other.limbs_);
+
     if (compare_result == CompareResult::LESS) {
       is_negative_ = !is_negative_;
       limbs_ = SubtractAbsoluteValues(other.limbs_, limbs_);
@@ -121,7 +122,6 @@ BigInteger& BigInteger::operator*=(const BigInteger& other) {
   if (this->IsZeroed() || other.IsZeroed()) {
     is_negative_ = false;
     limbs_ = {0};
-
   } else {
     is_negative_ = this->is_negative_ != other.is_negative_;
     limbs_ =
@@ -292,8 +292,7 @@ std::string BigInteger::toString() const {
 
   std::vector<LimbType> limbs = limbs_;
   for (;;) {
-    // fixme: use IsZeroed() method
-    if ((limbs.size() == 1U) && (limbs[0] == 0)) {
+    if (IsZeroed(limbs)) {
       break;
     }
 
@@ -353,6 +352,10 @@ std::istream& operator>>(std::istream& in, BigInteger& value) {
 
 bool BigInteger::IsZeroed() const {
   return (limbs_.size() == 1) && (limbs_[0] == 0);
+}
+
+bool BigInteger::IsZeroed(const std::vector<LimbType>& limbs) {
+  return (limbs.size() == 1U) && (limbs[0] == 0);
 }
 
 /*************************************************************************
@@ -598,6 +601,25 @@ std::vector<BigInteger::LimbType> BigInteger::MultiplyAbsoluteValuesNaive(
   return result;
 }
 
+void BigInteger::MultiplyAbsoluteValueByLimbInplace(
+    std::vector<LimbType>& limbs, BigInteger::LimbType value) {
+  LimbType carry = 0;
+  // I do not want any ifs inside for loop because I want to have
+  // more chances that compiler would vectorize evaluation
+  // note: need to manually normalize |limbs| later
+  limbs.push_back(0);
+
+  for (LimbType& limb : limbs) {
+    ExtendedLimbType tmp = ExtendedLimbType(limb) * value + carry;
+    limb = GetLowPart(tmp);
+    carry = GetHighPart(tmp);
+  }
+
+  if (limbs.back() == 0) {
+    limbs.pop_back();
+  }
+}
+
 std::pair<std::vector<BigInteger::LimbType>, BigInteger::LimbType>
 BigInteger::DivideAbsoluteValueByLimb(const std::vector<LimbType>& left,
                                       LimbType right) {
@@ -686,6 +708,7 @@ void BigInteger::ShiftBitsRight(std::vector<LimbType>& limbs, long count) {
   if (count == 0) {
     return;
   }
+
   auto limbs_count = count / long(limb_type_size_);
   ShiftLimbsRight(limbs, limbs_count);
 
@@ -703,6 +726,7 @@ void BigInteger::ShiftBitsRight(std::vector<LimbType>& limbs, long count) {
 
 constexpr BigInteger::LimbType BigInteger::GetLeastBitsMask(size_t bits_count) {
   LimbType result = 0;
+
   for (size_t i = 0; i < bits_count; ++i) {
     result |= (LimbType(1) << i);
   }
