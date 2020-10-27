@@ -91,7 +91,14 @@ struct Point {
    */
   void rotate(const Point &point, double angle) noexcept;
 
-  Point rotated(const Point &center) const noexcept;
+  /**
+   * @brief Rotates copy of |this| point by |angle| angle relatively point
+   * |center| and returns it
+   * @param center Center of rotation
+   * @param angle Rotation angle
+   * @return Rotated copy
+   */
+  Point rotated(const Point &center, double angle) const noexcept;
 
   /**
    * @brief The value of coordinate on OX axis

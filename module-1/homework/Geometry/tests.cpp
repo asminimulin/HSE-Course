@@ -260,6 +260,40 @@ TEST(Ellipse, Area) {
     ASSERT_NEAR(ellipse.area(), area, 1e-6);
 }
 
+TEST(Circle, All) {
+  Circle circle({10,10}, 5);
+  Circle other_circle({-4, -8}, 6);
+
+  ASSERT_NEAR(circle.radius(), 5, 1e-6);
+
+  ASSERT_NEAR(circle.area(), common::PI * 5 * 5, 1e-6);
+
+  ASSERT_TRUE(circle.isSimilarTo(other_circle));
+
+  ASSERT_FALSE(circle.isCongruentTo(other_circle));
+  other_circle.scale(other_circle.center(), 5.0 / 6.0);
+  ASSERT_TRUE(circle.isCongruentTo(other_circle));
+
+  auto rotated_circle = circle;
+  rotated_circle.rotate(circle.center(), 180);
+  ASSERT_TRUE(circle == rotated_circle);
+
+  ASSERT_NEAR(circle.perimeter(), 2 * common::PI * 5, 1e-6);
+
+  Circle reflected_circle({5, 5}, 5);
+  reflected_circle.reflex(Line({0, 15}, {15, 0}));
+  ASSERT_TRUE(circle == reflected_circle);
+
+  // inside
+  ASSERT_TRUE(circle.containsPoint({7.5, 7.5}));
+  // outside
+  ASSERT_FALSE(circle.containsPoint({20, 30}));
+  // on the edge
+  ASSERT_TRUE(circle.containsPoint({10, 15}));
+}
+
+
+
 int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();

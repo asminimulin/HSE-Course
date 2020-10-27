@@ -92,7 +92,14 @@ bool Ellipse::isCongruentTo(const Shape &other) const noexcept {
 }
 
 bool Ellipse::isSimilarTo(const Shape &other) const noexcept {
-  return isCongruentTo(other);
+  auto other_ellipse = dynamic_cast<const Ellipse*>(&other);
+
+  if (other_ellipse == nullptr) {
+    // not even an ellipse
+    return false;
+  }
+  return common::eq(this->majorSemiAxis() * other_ellipse->minorSemiAxis(),
+                    this->minorSemiAxis() * other_ellipse->majorSemiAxis());
 }
 
 bool Ellipse::containsPoint(Point point) const noexcept {
@@ -102,8 +109,8 @@ bool Ellipse::containsPoint(Point point) const noexcept {
 }
 
 void Ellipse::rotate(Point center, double angle) noexcept {
-  first_focus_.rotate(center, angle);
-  second_focus_.rotate(center, angle);
+  first_focus_.rotate(center, common::DegreesToRadians(angle));
+  second_focus_.rotate(center, common::DegreesToRadians(angle));
 }
 
 void Ellipse::reflex(Point center) noexcept {
@@ -121,6 +128,9 @@ void Ellipse::scale(Point center, double coefficient) noexcept {
     Point& p = *p_ptr;
     auto x = (p.x - center.x) * coefficient + center.x;
     auto y = (p.y - center.y) * coefficient + center.y;
+    p.x = x;
+    p.y = y;
   }
-  length_sum_ *= coefficient * coefficient;
+//  length_sum_ *= coefficient * coefficient;
+  length_sum_ *= coefficient;
 }

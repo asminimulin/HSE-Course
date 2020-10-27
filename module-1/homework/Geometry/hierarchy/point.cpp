@@ -29,9 +29,11 @@ bool Point::lexicographically_less(const Point &other) const noexcept {
 }
 
 void Point::rotate(const Point &point, double angle) noexcept {
-  auto new_x = std::cos(angle) * x - std::sin(angle) * y;
-  y = std::sin(angle) * x + std::sin(angle) * y;
-  x = new_x;
+  auto dx = x - point.x;
+  auto dy = y - point.y;
+  auto new_x = std::cos(angle) * dx - std::sin(angle) * dy;
+  y = point.y + std::sin(angle) * dx + std::sin(angle) * dy;
+  x = point.x + new_x;
 }
 
 void Point::reflex(const Line &axis) {
@@ -41,24 +43,24 @@ void Point::reflex(const Line &axis) {
   auto n_length =
       std::abs(Vector2(*this, A) ^ Vector2(*this, B)) / common::dist(A, B);
 
-  auto n = Vector2(A, B).rotated(common::PI / 2) * n_length;
+  auto n = Vector2(A, B).rotated(common::PI / 2) * (n_length / common::dist(A, B));
 
   Point Q(x + n.x, y + n.y);
 
-  Point result = rotated(Q);
+  Point result = reflected(Q);
 
   Vector2 ab(A, B);
   if (common::gt(ab ^ Vector2(A, result), 0),
       common::gt(ab ^ Vector2(A, *this), 0)) {
     Q = {x - n.x, y - n.y};
-    result = rotated(Q);
+    result = reflected(Q);
   }
 
   *this = result;
 }
 
-Point Point::rotated(const Point &center) const noexcept {
+Point Point::rotated(const Point &center, double angle) const noexcept {
   auto result = *this;
-  result.rotated(center);
+  result.rotate(center, angle);
   return result;
 }
