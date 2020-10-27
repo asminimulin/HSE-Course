@@ -169,7 +169,7 @@ class BigInteger {
 
   std::vector<LimbType> limbs_;
 
-  static constexpr size_t KARATSUBA_STOP_RECURSION_SIZE = 10;
+  static constexpr size_t KARATSUBA_STOP_RECURSION_SIZE = 70;
 };
 
 std::istream& operator>>(std::istream& in, BigInteger& value);

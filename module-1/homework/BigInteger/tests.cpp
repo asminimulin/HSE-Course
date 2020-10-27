@@ -106,6 +106,26 @@ TEST(Comparison, Test1) {
     ASSERT_EQ(oss.str(), "010101");
 }
 
+TEST(Comparison, NegativeValues) {
+  BigInteger a = 10;
+  BigInteger b = -10;
+
+  std::stringstream ss;
+  ss << (a <= b) << (a >= b) << (a == b) << (a != b) << (a < b) << (a > b);
+  ASSERT_EQ(ss.str(), "010101");
+  ss.str("");
+
+  std::swap(b, a);
+  ss << (a <= b) << (a >= b) << (a == b) << (a != b) << (a < b) << (a > b);
+  ASSERT_EQ(ss.str(), "100110");
+  ss.str("");
+
+  a = -20;
+  b = -20;
+  ss << (a <= b) << (a >= b) << (a == b) << (a != b) << (a < b) << (a > b);
+  ASSERT_EQ(ss.str(), "111000");
+}
+
 TEST(Huge, Test1) {
 
   std::istringstream iss("9325492345983274589758023847509283745827349587212938129"
