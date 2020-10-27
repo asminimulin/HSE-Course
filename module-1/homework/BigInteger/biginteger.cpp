@@ -78,16 +78,14 @@ BigInteger BigInteger::operator+() const {
 
 BigInteger& BigInteger::operator+=(const BigInteger& other) {
   if (is_negative_ == other.is_negative_) {
-    limbs_ = SummarizeAbsoluteValues(limbs_, other.limbs_);
-
+    SummarizeAbsoluteValuesInplace(limbs_, other.limbs_);
   } else {
     auto compare_result = CompareAbsoluteValues(limbs_, other.limbs_);
-
     if (compare_result == CompareResult::LESS) {
       is_negative_ = !is_negative_;
       limbs_ = SubtractAbsoluteValues(other.limbs_, limbs_);
     } else if (compare_result == CompareResult::GREATER) {
-      limbs_ = SubtractAbsoluteValues(limbs_, other.limbs_);
+      SubtractAbsoluteValuesInplace(limbs_, other.limbs_);
     } else if (compare_result == CompareResult::EQUAL) {
       is_negative_ = false;
       limbs_ = {0};
@@ -100,22 +98,18 @@ BigInteger& BigInteger::operator+=(const BigInteger& other) {
 
 BigInteger& BigInteger::operator-=(const BigInteger& other) {
   if (is_negative_ != other.is_negative_) {
-    limbs_ = SummarizeAbsoluteValues(limbs_, other.limbs_);
-
+    SubtractAbsoluteValuesInplace(limbs_, other.limbs_);
   } else {
     auto compare_result = CompareAbsoluteValues(limbs_, other.limbs_);
 
     if (compare_result == CompareResult::LESS) {
       is_negative_ = !is_negative_;
       limbs_ = SubtractAbsoluteValues(other.limbs_, limbs_);
-
     } else if (compare_result == CompareResult::GREATER) {
-      limbs_ = SubtractAbsoluteValues(limbs_, other.limbs_);
-
+      SubtractAbsoluteValuesInplace(limbs_, other.limbs_);
     } else if (compare_result == CompareResult::EQUAL) {
       is_negative_ = false;
       limbs_ = {0};
-
     } else {
       throw std::runtime_error("Comparing result has unexpected value");
     }
@@ -397,13 +391,11 @@ BigInteger::CompareResult BigInteger::CompareAbsoluteValues(
   return CompareResult::EQUAL;
 }
 
-std::vector<BigInteger::LimbType> BigInteger::SummarizeAbsoluteValues(
-    const std::vector<LimbType>& left, const std::vector<LimbType>& right) {
-  std::vector<LimbType> result(std::max(left.size(), right.size()));
-
+void BigInteger::SummarizeAbsoluteValuesInplace(
+    std::vector<LimbType>& left, const std::vector<LimbType>& right) {
   std::size_t pos = 0;
   LimbType carry = 0;
-  while (pos < result.size()) {
+  while (pos < left.size()) {
     ExtendedLimbType limbs_sum;
 
     if (pos < right.size()) {
@@ -413,22 +405,33 @@ std::vector<BigInteger::LimbType> BigInteger::SummarizeAbsoluteValues(
       limbs_sum = ExtendedLimbType(left[pos]) + carry;
     }
 
-    result[pos] = GetLowPart(limbs_sum);
+    left[pos] = GetLowPart(limbs_sum);
     carry = GetHighPart(limbs_sum);
     pos++;
   }
 
-  if (carry != 0) {
-    result.push_back(carry);
+  while (pos < right.size()) {
+    ExtendedLimbType limb_sum = ExtendedLimbType(right[pos]) + carry;
+    left.push_back(GetLowPart(limb_sum));
+    carry = GetHighPart(limb_sum);
+    pos++;
   }
 
+  if (carry != 0) {
+    left.push_back(carry);
+  }
+}
+
+std::vector<BigInteger::LimbType> BigInteger::SummarizeAbsoluteValues(
+    const std::vector<LimbType>& left, const std::vector<LimbType>& right) {
+  std::vector<LimbType> result = left;
+  SummarizeAbsoluteValuesInplace(result, right);
   return result;
 }
 
-std::vector<BigInteger::LimbType> BigInteger::SubtractAbsoluteValues(
-    const std::vector<LimbType>& left, const std::vector<LimbType>& right) {
+void BigInteger::SubtractAbsoluteValuesInplace(
+    std::vector<LimbType>& left, const std::vector<LimbType>& right) {
   // It is private function. We assume that left > right.
-  std::vector<LimbType> result(left.size(), 0);
 
   size_t pos = 0;
   ExtendedLimbType borrow = 0;
@@ -436,15 +439,15 @@ std::vector<BigInteger::LimbType> BigInteger::SubtractAbsoluteValues(
     // Use ExtendedLimbType to calculate because LimbType overflow occurs when
     // (right[pos] == std::numeric_limits<LimbType>::max() && borrow == 1)
     if (ExtendedLimbType(left[pos]) >= ExtendedLimbType(right[pos]) + borrow) {
-      result[pos] = LimbType(ExtendedLimbType(left[pos] - right[pos]) - borrow);
+      left[pos] = LimbType(ExtendedLimbType(left[pos] - right[pos]) - borrow);
       borrow = 0;
     } else {
       ExtendedLimbType tmp = left[pos];
       tmp += (ExtendedLimbType(1) << limb_type_size_);
       tmp -= ExtendedLimbType(right[pos]);
-      tmp += borrow;
+      tmp -= borrow;
 
-      result[pos] = LimbType(tmp);
+      left[pos] = LimbType(tmp);
       borrow = 1;
     }
     pos++;
@@ -452,26 +455,23 @@ std::vector<BigInteger::LimbType> BigInteger::SubtractAbsoluteValues(
 
   while (pos < left.size() && borrow == 1) {
     if (left[pos] >= borrow) {
-      result[pos] = LimbType(left[pos] - borrow);
+      left[pos] -= LimbType(borrow);
       borrow = 0;
     } else {
-      result[pos] = LimbType(std::numeric_limits<LimbType>::max() - borrow);
+      left[pos] = LimbType(std::numeric_limits<LimbType>::max() - borrow);
       // here borrow still must be equal to 1
     }
     pos++;
   }
 
-  while (pos < left.size()) {
-    result[pos] = left[pos];
-    ++pos;
-  }
+  Normalize(left);
+}
 
-  Normalize(result);
-
-  if (result.empty()) {
-    throw std::runtime_error("Unexpected empty result of subtraction");
-  }
-
+std::vector<BigInteger::LimbType> BigInteger::SubtractAbsoluteValues(
+    const std::vector<LimbType>& left, const std::vector<LimbType>& right) {
+  // It is private function. We assume that left > right.
+  auto result = left;
+  SubtractAbsoluteValuesInplace(result, right);
   return result;
 }
 
@@ -509,55 +509,72 @@ std::vector<BigInteger::LimbType> BigInteger::MultiplyAbsoluteValues(
   return MultiplyAbsoluteValuesWithKaratsubaAlgo(left, right);
 }
 
+/**
+ * Explaining the whole math happening here
+ * left * right = (a * x + b) * (c * x + d) =
+ * = (a * c * x * x) +  (a * d + b * c) * x + b * d =
+ * = ( a * c * x * x) + ((a + b) * (c + d) - (a * c) - (b * d)) + (b * d)
+ * where x is 2 in some natural power
+ * Let's say:
+ *  ac = a * c
+ *  bd = b * d
+ *  a_b = a + b
+ *  c_d = c + d
+ *
+ *  Then let's say
+ *  f = (a_b * c_d - ac - bd)
+ *
+ *  The result if equal to (ac * x * x) + (f * x) + bd
+ */
 std::vector<BigInteger::LimbType>
 BigInteger::MultiplyAbsoluteValuesWithKaratsubaAlgo(
     const std::vector<LimbType>& left, const std::vector<LimbType>& right) {
-  if (left.size() < KARATSUBA_STOP_RECURSION_SIZE) {
+  if (std::min(left.size(), right.size()) < KARATSUBA_STOP_RECURSION_SIZE) {
     return MultiplyAbsoluteValuesNaive(right, left);
-
-  } else if (right.size() < KARATSUBA_STOP_RECURSION_SIZE) {
-    return MultiplyAbsoluteValuesNaive(left, right);
-  } else {
-    auto max_half_size = std::max(left.size() / 2, right.size() / 2);
-    auto half_size = std::min(left.size(), right.size());
-    half_size = std::min(half_size, max_half_size);
-
-    std::vector a(left.begin() + long(half_size), left.end());
-    std::vector b(left.begin(), left.begin() + long(half_size));
-    std::vector c(right.begin() + long(half_size), right.end());
-    std::vector d(right.begin(), right.begin() + long(half_size));
-
-    auto mul_ac = MultiplyAbsoluteValuesWithKaratsubaAlgo(a, c);
-    auto mul_bd = MultiplyAbsoluteValuesWithKaratsubaAlgo(b, d);
-    auto sum_ab = SummarizeAbsoluteValues(a, b);
-    auto sum_cd = SummarizeAbsoluteValues(c, d);
-
-    auto mul_sum_ab_sum_cd =
-        MultiplyAbsoluteValuesWithKaratsubaAlgo(sum_ab, sum_cd);
-    auto center = SubtractAbsoluteValues(
-        mul_sum_ab_sum_cd, SummarizeAbsoluteValues(mul_ac, mul_bd));
-
-    // I am trying to avoid unnecessary copying and memory allocations,
-    // so I can use mul_bd instance to store result
-    // mul_bd is part of the final answer, so I need to add remaining values
-    auto& result = mul_bd;
-
-    ShiftLimbsLeft(center, half_size);
-    ShiftLimbsLeft(mul_ac, half_size * 2);
-
-    result = SummarizeAbsoluteValues(result,
-                                     SummarizeAbsoluteValues(mul_ac, center));
-    return result;
   }
+
+  auto max_half_size = std::max(left.size() / 2, right.size() / 2);
+  auto half_size = std::min(left.size(), right.size());
+  half_size = std::min(half_size, max_half_size);
+
+  std::vector a(left.begin() + long(half_size), left.end());
+  std::vector b(left.begin(), left.begin() + long(half_size));
+  std::vector c(right.begin() + long(half_size), right.end());
+  std::vector d(right.begin(), right.begin() + long(half_size));
+
+  auto a_b = SummarizeAbsoluteValues(a, b);
+
+  // Reuse a's memory
+  auto& ac = a;
+  ac = MultiplyAbsoluteValuesWithKaratsubaAlgo(a, c);
+
+  // Reuse b's memory
+  auto& bd = b;
+  bd = MultiplyAbsoluteValuesWithKaratsubaAlgo(b, d);
+
+  // Reuse c's memory
+  auto& c_d = c;
+  SummarizeAbsoluteValuesInplace(c_d, d);
+
+  // Reuse a_b's memory
+  auto& f = a_b;
+  f = MultiplyAbsoluteValuesWithKaratsubaAlgo(a_b, c_d);
+  SubtractAbsoluteValuesInplace(f, ac);
+  SubtractAbsoluteValuesInplace(f, bd);
+
+  ShiftLimbsLeft(ac, half_size * 2);
+  ShiftLimbsLeft(f, half_size);
+
+  // bd already contains part of answer
+  SummarizeAbsoluteValuesInplace(bd, ac);
+  SummarizeAbsoluteValuesInplace(bd, f);
+
+  return bd;
 }
 
 std::vector<BigInteger::LimbType> BigInteger::MultiplyAbsoluteValuesNaive(
     const std::vector<LimbType>& shorter, const std::vector<LimbType>& longer) {
   std::vector<LimbType> result(shorter.size() + longer.size(), 0);
-
-  // todo: check if there is a bug.
-  // It is strange that there are no LimbType overflow checks
-  // in the whole function
 
   for (size_t short_pos = 0; short_pos < shorter.size(); ++short_pos) {
     ExtendedLimbType carry = 0;
@@ -627,7 +644,7 @@ BigInteger::DivideAbsoluteValues(const std::vector<LimbType>& left,
     if (CompareAbsoluteValues(dividend, current_value) != CompareResult::LESS) {
       // set least bit
       result[0] |= 1U;
-      dividend = SubtractAbsoluteValues(dividend, current_value);
+      SubtractAbsoluteValuesInplace(dividend, current_value);
     }
 
     ShiftBitsRight(current_value, 1);
@@ -723,5 +740,4 @@ size_t BigInteger::GetMostSignificantBitPosition(LimbType value) noexcept {
 
   return pos - 1;
 }
-
 }  // namespace big_integer

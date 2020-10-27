@@ -99,8 +99,14 @@ class BigInteger {
   static CompareResult CompareAbsoluteValues(
       const std::vector<LimbType>& left, const std::vector<LimbType>& right);
 
+  static void SummarizeAbsoluteValuesInplace(
+      std::vector<LimbType>& left, const std::vector<LimbType>& right);
+
   static std::vector<LimbType> SummarizeAbsoluteValues(
       const std::vector<LimbType>& left, const std::vector<LimbType>& right);
+
+  static void SubtractAbsoluteValuesInplace(std::vector<LimbType>& left,
+                                            const std::vector<LimbType>& right);
 
   static std::vector<uint32_t> SubtractAbsoluteValues(
       const std::vector<uint32_t>& left, const std::vector<uint32_t>& right);
@@ -157,7 +163,7 @@ class BigInteger {
 
   std::vector<LimbType> limbs_;
 
-  static constexpr size_t KARATSUBA_STOP_RECURSION_SIZE = 70;
+  static constexpr size_t KARATSUBA_STOP_RECURSION_SIZE = 10;
 };
 
 std::istream& operator>>(std::istream& in, BigInteger& value);
