@@ -109,9 +109,32 @@ TEST(Replace, Test2) {
     testing::StaticAssertTypeEq<Replace<NullType, double, std::string>::NewTypeList, NullType>();
 }
 
-// TEST(TypeAt, Test1) {
-//     typedef TypeList<int, TypeList<double, NullType>> actual;
-//     typedef double expected;
-    
-//     ASSERT_TRUE(std::is_same<TypeAt<actual, 1>::TargetType, expected>::value);
-// }
+TEST(TypeAt, Test1) {
+    typedef TypeList<int, TypeList<double, NullType>> actual;
+    typedef double expected;
+
+    using target_type = TypeAt<actual, 1>::TargetType;
+    bool x = std::is_same<target_type, expected>::value;
+    ASSERT_TRUE(x);
+}
+
+TEST(Custom, Test) {
+    using list1 = TypeList<int, TypeList<short, TypeList<short, TypeList<char, NullType>>>>;
+
+    testing::StaticAssertTypeEq<typename Append<list1, NullType>::NewTypeList, list1>();
+
+    testing::StaticAssertTypeEq<Erase<list1, NullType>::NewTypeList, list1>();
+
+    using list2 = TypeList<int, TypeList<float, TypeList<char, NullType>>>;
+    testing::StaticAssertTypeEq<Erase<list2, void>::NewTypeList, list2>();
+
+    testing::StaticAssertTypeEq<EraseAll<NullType, short>::NewTypeList, NullType>();
+
+    using list3 = Replace<list1, short, long>::NewTypeList;
+    using list3_expected = TypeList<int, TypeList<long, TypeList<short, TypeList<char, NullType>>>>;
+    testing::StaticAssertTypeEq<list3, list3_expected>();
+
+    testing::StaticAssertTypeEq<TypeAt<list1, 100000>::TargetType, NullType>();
+
+    testing::StaticAssertTypeEq<Erase<TypeList<int, NullType>, int>::NewTypeList, NullType>();
+}
