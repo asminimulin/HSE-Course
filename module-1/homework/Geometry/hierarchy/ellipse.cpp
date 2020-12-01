@@ -20,11 +20,11 @@ std::pair<Line, Line> Ellipse::directrices() const noexcept {
   auto n =
       Vector2(first_focus_, second_focus_).normalized().rotated(common::PI / 2);
 
-  Point S1(first_focus_.x + n.x, first_focus_.y + n.y);
-  Point S2(first_focus_.x - n.x, first_focus_.y - n.y);
+  Point S1(first_focus_.x + n.getX(), first_focus_.y + n.getY());
+  Point S2(first_focus_.x - n.getX(), first_focus_.y - n.getY());
 
-  Point T1(second_focus_.x + n.x, first_focus_.y + n.y);
-  Point T2(second_focus_.x - n.x, second_focus_.y - n.y);
+  Point T1(second_focus_.x + n.getX(), first_focus_.y + n.getY());
+  Point T2(second_focus_.x - n.getX(), second_focus_.y - n.getY());
 
   return {Line(S1, S2), Line(T1, T2)};
 }
@@ -36,7 +36,7 @@ double Ellipse::eccentricity() const noexcept {
 Point Ellipse::center() const noexcept {
   Vector2 vec(first_focus_, second_focus_);
   vec *= 0.5;
-  return {first_focus_.x + vec.x, first_focus_.y + vec.y};
+  return {first_focus_.x + vec.getX(), first_focus_.y + vec.getY()};
 }
 
 double Ellipse::majorSemiAxis() const noexcept { return length_sum_ / 2; }

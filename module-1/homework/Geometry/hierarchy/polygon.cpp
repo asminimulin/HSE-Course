@@ -222,7 +222,7 @@ void Polygon::reflex(Point center) noexcept {
   for (auto &point : vertices_) {
     auto move = Vector2(point, center);
     move *= 2;
-    point = {point.x + move.x, point.y + move.y};
+    point = {point.x + move.getX(), point.y + move.getY()};
   }
   Normalize(vertices_);
 }
@@ -241,13 +241,13 @@ void Polygon::reflex(Line line) noexcept {
 
     // Try one direction
     auto pq = ab.rotated(common::PI / 2) * (PQ_length / ab.length());
-    Point Q(point.x + pq.x, point.y + pq.y);
+    Point Q(point.x + pq.getX(), point.y + pq.getY());
     auto result = point.reflected(Q);
 
     if (common::gt(ab ^ Vector2(A, result), 0) ==
         common::gt(ab ^ Vector2(A, point), 0)) {
       pq *= -1;
-      Q = {point.x + pq.x, point.y + pq.y};
+      Q = {point.x + pq.getX(), point.y + pq.getY()};
       result = point.reflected(Q);
     }
 

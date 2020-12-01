@@ -20,7 +20,7 @@ bool Point::operator!=(const Point &other) const {
 Point Point::reflected(const Point &center) {
   Vector2 vec(*this, center);
   vec *= 2;
-  return Point{x + vec.x, y + vec.y};
+  return Point{x + vec.getX(), y + vec.getY()};
 }
 
 bool Point::lexicographically_less(const Point &other) const noexcept {
@@ -45,14 +45,14 @@ void Point::reflex(const Line &axis) {
 
   auto n = Vector2(A, B).rotated(common::PI / 2) * (n_length / common::dist(A, B));
 
-  Point Q(x + n.x, y + n.y);
+  Point Q(x + n.getX(), y + n.getY());
 
   Point result = reflected(Q);
 
   Vector2 ab(A, B);
   if (common::gt(ab ^ Vector2(A, result), 0),
       common::gt(ab ^ Vector2(A, *this), 0)) {
-    Q = {x - n.x, y - n.y};
+    Q = {x - n.getX(), y - n.getY()};
     result = reflected(Q);
   }
 

@@ -147,6 +147,25 @@ struct Vector2 {
   }
 
   /**
+   * @brief Getter for X coordinate
+   *
+   * @return X coordinate of vector
+   */
+  inline double getX() const noexcept {
+    return x;
+  }
+
+  /**
+   * @brief Getter for Y coordinate
+   *
+   * @return X coordinate of vector
+   */
+  inline double getY() const noexcept {
+    return y;
+  }
+
+ private:
+  /**
    * @brief Value of coordinate on OX axis
    */
   double x;

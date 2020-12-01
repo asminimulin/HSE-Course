@@ -13,7 +13,7 @@ bool Ray::hasIntersection(const Segment &segment) {
   Point B = segment.getPointB();
 
   Line ray_line(start_,
-                Point(start_.x + direction_.x, start_.y + direction_.y));
+                Point(start_.x + direction_.getX(), start_.y + direction_.getY()));
   Line segment_line(A, B);
 
   if (!ray_line.hasIntersection(segment_line)) {
