@@ -3,6 +3,8 @@
 #include <utility>
 
 class Line {
+  friend class Ray;
+
 public:
   Line();
   Line(const Point &a, const Point &b);
@@ -15,8 +17,5 @@ public:
   bool hasIntersection(const Line& line) const noexcept;
 
 private:
-  // Is it bad???
-  friend class Ray;
-
   double a_, b_, c_;
 };
