@@ -108,7 +108,7 @@ TEST(Congruent, Congruent) {
         Point d(1, 0);
         vec = {a, b, c, d};
     }
-    
+
     Polygon actual(vec);
 
     actual.rotate({0, 0}, 45);
@@ -120,7 +120,7 @@ TEST(Congruent, Congruent) {
         Point d(1, -1);
         vec = {a, b, c, d};
     }
-    
+
 
     Polygon expected(vec);
 
@@ -138,7 +138,7 @@ TEST(Area, TrianglePolygons) {
 
     std::vector<Point> vec = {a, b, d, c};
     Polygon poly(vec);
-    
+
     ASSERT_NEAR(poly.area(), triangle1.area() + triangle2.area(),1e-6);
 }
 
@@ -152,7 +152,7 @@ TEST(Transformations, Test1) {
 
         vec = {a, b, c, d};
     }
-  
+
     Polygon actual(vec);
     actual.rotate(Point(0,0), 45);
     actual.scale(Point(0,0), 20);
@@ -165,7 +165,7 @@ TEST(Transformations, Test1) {
 
         vec = {a, b, c, d};
     }
-  
+
     Polygon expected(vec);
 
     ASSERT_TRUE(actual == expected);
@@ -187,7 +187,7 @@ TEST(Transformations, Test2) {
     actual.rotate(a , 45);
     Line line(a, {1, 1});
     actual.reflex(line);
-    actual.scale(a, 0.05);   
+    actual.scale(a, 0.05);
 
     ASSERT_TRUE(actual == expected);
 }
@@ -197,7 +197,7 @@ TEST(Rectangle, Test1) {
     Point b(2.5, 3.0);
     Point c(1.0, 3.0);
     double ratio = 0.5;
-    
+
     Rectangle rectangle(a, b, ratio);
     Triangle triangle(a, b, c);
     ASSERT_NEAR(rectangle.area(), 2 * triangle.area(), 1e-6);
@@ -255,9 +255,53 @@ TEST(Ellipse, Area) {
     Point p2(c, 0.0);
     Ellipse ellipse(p1, p2, 2 * a);
     double pi = 3.1415926;
-    
+
     double area = pi * a * b;
     ASSERT_NEAR(ellipse.area(), area, 1e-6);
+}
+
+TEST(Circle, All) {
+  Circle circle({10,10}, 5);
+  Circle other_circle({-4, -8}, 6);
+
+  ASSERT_NEAR(circle.radius(), 5, 1e-6);
+
+  ASSERT_NEAR(circle.area(), common::PI * 5 * 5, 1e-6);
+
+  ASSERT_TRUE(circle.isSimilarTo(other_circle));
+
+  ASSERT_FALSE(circle.isCongruentTo(other_circle));
+  other_circle.scale(other_circle.center(), 5.0 / 6.0);
+  ASSERT_TRUE(circle.isCongruentTo(other_circle));
+
+  auto rotated_circle = circle;
+  rotated_circle.rotate(circle.center(), 180);
+  ASSERT_TRUE(circle == rotated_circle);
+
+  ASSERT_NEAR(circle.perimeter(), 2 * common::PI * 5, 1e-6);
+
+  Circle reflected_circle({5, 5}, 5);
+  reflected_circle.reflex(Line({0, 15}, {15, 0}));
+  ASSERT_TRUE(circle == reflected_circle);
+
+  // inside
+  ASSERT_TRUE(circle.containsPoint({7.5, 7.5}));
+  // outside
+  ASSERT_FALSE(circle.containsPoint({20, 30}));
+  // on the edge
+  ASSERT_TRUE(circle.containsPoint({10, 15}));
+}
+
+TEST(Square, All) {
+  Square square({10, 20}, {25, 5});
+
+  auto circumscribed_circle = square.circumscribedCircle();
+  ASSERT_TRUE(circumscribed_circle.center() == Point(17.5, 12.5));
+  ASSERT_TRUE(common::eq(circumscribed_circle.radius(), 7.5 * std::sqrt(2)));
+
+  auto inscribed_circle = square.inscribedCircle();
+  ASSERT_TRUE(inscribed_circle.center() == Point(17.5, 12.5));
+  ASSERT_TRUE(common::eq(inscribed_circle.radius(), 7.5));
 }
 
 int main(int argc, char** argv) {
