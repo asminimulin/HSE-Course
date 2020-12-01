@@ -158,7 +158,7 @@ struct Vector2 {
   /**
    * @brief Getter for Y coordinate
    *
-   * @return X coordinate of vector
+   * @return Y coordinate of vector
    */
   inline double getY() const noexcept {
     return y;
