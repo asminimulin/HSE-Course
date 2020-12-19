@@ -4,6 +4,8 @@ include(GoogleTest)
 
 project("BigInteger")
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 configure_file(CMakeLists.txt.in googletest-download/CMakeLists.txt)
 
 execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
@@ -38,7 +40,19 @@ if (CMAKE_VERSION VERSION_LESS 2.8.11)
   include_directories("${gtest_SOURCE_DIR}/include")
 endif()
 
+add_library(biginteger STATIC biginteger.h biginteger.cpp)
+target_compile_features(biginteger PUBLIC cxx_std_20)
+target_compile_options(biginteger PUBLIC -Wall -Wextra -Wshadow -Wconversion)
+
 # Now simply link against gtest or gtest_main as needed. Eg
-add_executable(biginteger tests.cpp biginteger.h biginteger.cpp)
-target_link_libraries(biginteger gtest_main)
-add_test(NAME biginteger_test COMMAND biginteger)
+add_executable(biginteger_tests tests.cpp)
+target_link_libraries(biginteger_tests PRIVATE biginteger gtest_main)
+add_test(NAME biginteger_test COMMAND biginteger_tests)
+
+option(ENABLE_SANITIZERS OFF)
+if(ENABLE_SANITIZERS)
+  add_library(sanitizers INTERFACE)
+  target_compile_options(sanitizers INTERFACE -fsanitize=address,undefined,leak)
+  target_link_options(sanitizers INTERFACE -fsanitize=address,undefined,leak)
+  target_link_libraries(biginteger PUBLIC sanitizers)
+endif()
